@@ -18,8 +18,9 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    // Transactional email (invites, password resets) when MAIL_MAILER=resend.
     'resend' => [
-        'key' => env('RESEND_API_KEY'),
+        'key' => env('RESEND_API_KEY', env('RESEND_KEY')),
     ],
 
     'ses' => [

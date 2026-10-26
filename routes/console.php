@@ -5,6 +5,7 @@ use App\Models\StaffAuditLog;
 use App\Models\User;
 use App\Services\InboxFeed;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inbox:scan-missed', function (InboxFeed $feed) {
@@ -33,3 +34,27 @@ Artisan::command('spotter:staff {email} {--revoke}', function (string $email) {
 
     $this->info($this->option('revoke') ? "{$user->email} is no longer Spotter staff." : "{$user->email} can now open /admin.");
 })->purpose('Grant or revoke Spotter staff (backoffice) access');
+
+Artisan::command('spotter:mail-test {email}', function (string $email) {
+    $mailer = config('mail.default');
+    $from = config('mail.from.address');
+
+    if ($mailer === 'resend' && blank(config('services.resend.key'))) {
+        $this->error('MAIL_MAILER is resend but RESEND_API_KEY is not set.');
+
+        return 1;
+    }
+
+    try {
+        Mail::raw(
+            "This is a test email from Spotter, sent with the {$mailer} mailer from {$from}. If you can read this, email is working.",
+            fn ($message) => $message->to($email)->subject('Spotter email test'),
+        );
+    } catch (Throwable $e) {
+        $this->error('Sending failed: '.$e->getMessage());
+
+        return 1;
+    }
+
+    $this->info("Sent a test email to {$email} with the {$mailer} mailer, from {$from}.");
+})->purpose('Send a test email to check mail delivery (sent immediately, not queued)');
