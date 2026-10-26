@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Role;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Builder;
@@ -53,10 +54,23 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
     'import_source', 'contract_months_left', 'onboarded_at',
 ])]
 #[Hidden(['password', 'invitation_token', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements HasLocalePreference
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
+
+    /**
+     * Match the column defaults so new models behave the same before and after saving.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'locale' => 'en',
+        'currency' => 'CAD',
+        'coaching_languages' => 'en',
+        'brand_color' => '#0A7A55',
+        'contract_months_left' => 0,
+    ];
 
     /**
      * Get the attributes that should be cast.
@@ -73,6 +87,14 @@ class User extends Authenticatable
             'invited_at' => 'datetime',
             'onboarded_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Emails and notifications go out in the user's language.
+     */
+    public function preferredLocale(): string
+    {
+        return $this->locale ?: config('app.locale');
     }
 
     public function isCoach(): bool
