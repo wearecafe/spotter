@@ -257,9 +257,6 @@ new #[Title('Exercises')] class extends Component {
                 @if ($ex->video_url)
                     <a href="{{ $ex->video_url }}" target="_blank" rel="noopener" class="text-sm font-semibold text-brand hover:underline dark:text-lime">{{ __('Watch demo video') }}</a>
                 @endif
-                @if ($ex->source === 'free-exercise-db' || ($ex->source === 'spotter' && $ex->source_id))
-                    <flux:text size="sm">{{ __('Photos and instructions from free-exercise-db (public domain).') }}</flux:text>
-                @endif
                 <div class="flex flex-wrap justify-end gap-2">
                     @if ($ex->isShared())
                         <flux:button icon="document-duplicate" wire:click="copyToMine({{ $ex->id }})">{{ __('Copy to edit') }}</flux:button>

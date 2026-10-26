@@ -60,7 +60,7 @@ class ExerciseLibraryTest extends TestCase
             ->set('search', 'Back Squat')
             ->assertSee('Back Squat')
             ->call('openExercise', $squat->id)
-            ->assertSee('free-exercise-db')
+            ->assertDontSee('Photos and instructions from')
             ->assertSee($squat->imageUrls()[0])
             ->set('viewingId', null)
             ->set('search', '')
