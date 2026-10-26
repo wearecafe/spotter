@@ -181,16 +181,16 @@ new #[Title('Workout')] class extends Component {
             </div>
 
             <div class="flex flex-col gap-2">
-                <div class="grid grid-cols-[2rem_1fr_1fr_5rem_2.5rem] gap-2 text-xs font-medium uppercase text-zinc-500">
+                <div class="grid grid-cols-[1.5rem_minmax(0,1fr)_minmax(0,1.3fr)_4.25rem_2.25rem] gap-2 text-xs font-medium uppercase text-zinc-500">
                     <span>{{ __('Set') }}</span><span>{{ __('Reps') }}</span><span>{{ __('Load') }}</span><span>RPE</span><span class="text-center">{{ __('Done') }}</span>
                 </div>
                 @foreach ($logs[$item->id] as $setIndex => $set)
-                    <div class="grid grid-cols-[2rem_1fr_1fr_5rem_2.5rem] items-center gap-2" wire:key="set-{{ $item->id }}-{{ $setIndex }}">
+                    <div class="grid grid-cols-[1.5rem_minmax(0,1fr)_minmax(0,1.3fr)_4.25rem_2.25rem] items-center gap-2" wire:key="set-{{ $item->id }}-{{ $setIndex }}">
                         <span class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{{ $setIndex + 1 }}</span>
                         <flux:input size="sm" wire:model="logs.{{ $item->id }}.{{ $setIndex }}.reps" :placeholder="$item->reps" inputmode="numeric" :aria-label="__('Reps, set :n', ['n' => $setIndex + 1])" />
                         <flux:input size="sm" wire:model="logs.{{ $item->id }}.{{ $setIndex }}.load" :placeholder="$item->load" :aria-label="__('Load, set :n', ['n' => $setIndex + 1])" />
                         <flux:select size="sm" wire:model="logs.{{ $item->id }}.{{ $setIndex }}.rpe" :aria-label="__('RPE, set :n', ['n' => $setIndex + 1])">
-                            <flux:select.option value="">{{ $item->target_rpe ?: '—' }}</flux:select.option>
+                            <flux:select.option value="">—</flux:select.option>
                             @foreach ($this::RPE_OPTIONS as $rpe)
                                 <flux:select.option :value="$rpe">{{ $rpe }}</flux:select.option>
                             @endforeach

@@ -300,13 +300,15 @@ class CoachAssistant
                 $parts = [];
                 if ($c->weight !== null) {
                     $change = $context['weight_change'];
-                    $parts[] = __('Weight :w :u', ['w' => $c->weight, 'u' => $c->weight_unit]).($change !== null ? ' ('.($change > 0 ? '+' : '').$change.')' : '');
+                    $parts[] = __('Weight :w :u', ['w' => $c->weight, 'u' => $c->weight_unit]).($change !== null && $change != 0 ? ' ('.($change > 0 ? '+' : '').$change.' '.__('vs last week').')' : '');
                 }
                 $parts[] = __('energy :e/5, stress :s/5', ['e' => $c->energy ?? '?', 's' => $c->stress ?? '?']);
                 if ($c->sleep_hours !== null) {
                     $parts[] = __(':h h sleep', ['h' => $c->sleep_hours]);
                 }
-                $parts[] = __(':done of :total sessions', ['done' => $context['sessions']['done'], 'total' => $context['sessions']['scheduled']]);
+                if ($context['sessions']['scheduled'] > 0) {
+                    $parts[] = __(':done of :total sessions', ['done' => $context['sessions']['done'], 'total' => $context['sessions']['scheduled']]);
+                }
                 $summary = ucfirst(implode(', ', $parts)).'.'.($c->notes ? ' “'.Str::limit($c->notes, 160).'”' : '');
 
                 $struggling = ($c->energy !== null && $c->energy <= 2) || ($c->stress !== null && $c->stress >= 4);
@@ -339,7 +341,7 @@ class CoachAssistant
 
             case 'missed':
                 $missed = $context['missed'] ?? collect();
-                $summary = __('Missed :count sessions in the last 7 days: :titles.', ['count' => $missed->count(), 'titles' => $missed->pluck('title')->implode(', ')]);
+                $summary = __('Missed :count sessions in the last 7 days: :titles.', ['count' => $missed->count(), 'titles' => $missed->map(fn ($w) => $w->title.' ('.$w->scheduled_on->translatedFormat('D j M').')')->implode(', ')]);
                 $reply = $t('Hey :name, noticed the last few sessions slipped. No stress. What’s getting in the way this week? We can shorten things if time is tight.', ['name' => $name]);
                 break;
 

@@ -235,7 +235,7 @@ new #[Title('Program')] class extends Component {
         @endforeach
     </div>
 
-    <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
+    <div class="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div class="flex min-w-0 flex-col gap-5">
             @forelse ($this->days as $day)
                 <flux:card class="flex min-w-0 flex-col gap-3 p-0!" wire:key="day-{{ $day->id }}">
@@ -251,7 +251,7 @@ new #[Title('Program')] class extends Component {
                     </div>
 
                     <div class="overflow-x-auto px-2 pb-2">
-                        <table class="w-full min-w-[56rem] text-sm">
+                        <table class="w-full min-w-[52rem] text-sm">
                             <thead>
                                 <tr class="text-xs uppercase tracking-wide text-zinc-500">
                                     <th scope="col" class="px-2 py-1 text-start font-medium">{{ __('Exercise') }}</th>
