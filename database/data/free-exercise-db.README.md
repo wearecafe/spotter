@@ -12,4 +12,6 @@ commit (see `EXERCISE_IMAGE_BASE_URL` in `.env.example`). To serve them from our
 a CDN, copy the `exercises/` folder from that commit and point `EXERCISE_IMAGE_BASE_URL` at it.
 
 Load or refresh: `php artisan db:seed --class=FreeExerciseDbSeeder --force` (also run by
-`ExerciseLibrarySeeder`, which the deploy command calls). Safe to run repeatedly.
+`ExerciseLibrarySeeder`). It's loaded automatically by the
+`2026_10_30_000001_load_exercise_library` migration, so `php artisan migrate` is enough on a new
+environment. Safe to run repeatedly.
