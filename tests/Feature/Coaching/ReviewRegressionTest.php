@@ -102,7 +102,8 @@ class ReviewRegressionTest extends TestCase
         $this->assertNotNull($at(2, 1)->customized_at);
         $this->assertTrue($at(2, 1)->scheduled_on->isSameDay($at(1, 1)->scheduled_on->addWeek()));
         $this->assertFalse($at(1, 1)->scheduled_on->isSameDay($at(1, 2)->scheduled_on));
-        $this->assertSame('52.5 kg', $at(2, 2)->items->first()->load, 'Week 2 day 2 follows the blueprint, planned one step up.');
+        $this->assertNull($at(2, 2), 'The export had no day 2 in week 2, so that session is skipped.');
+        $this->assertSame('52.5 kg', $at(3, 2)->items->first()->load, 'Week 3 day 2 is one step on from week 1 (the skipped week adds nothing).');
     }
 
     public function test_lifting_less_than_prescribed_holds_the_load(): void

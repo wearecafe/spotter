@@ -145,7 +145,20 @@ new #[Title('Program')] class extends Component {
             'weeks' => ['required', 'integer', 'between:1,52'],
         ], attributes: ['startsOn' => __('start date')]);
 
-        $this->program->update(['title' => $this->title, 'starts_on' => $this->startsOn, 'planned_weeks' => $this->weeks]);
+        $this->program->update(['title' => $this->title, 'planned_weeks' => $this->weeks]);
+
+        if (! $this->program->starts_on->isSameDay(\Illuminate\Support\Carbon::parse($this->startsOn))) {
+            if ($problem = $this->scheduler()->moveStart($this->program, $this->startsOn)) {
+                $this->addError('startsOn', $problem);
+                $this->startsOn = $this->program->starts_on->toDateString();
+
+                return;
+            }
+
+            $this->program->refresh();
+            $this->weeks = $this->program->planned_weeks;
+        }
+
         $this->scheduler()->sync($this->program);
         $this->loadBlueprint();
 

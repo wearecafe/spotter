@@ -7,7 +7,9 @@ use App\Models\ProgramDay;
 use App\Models\ProgramExercise;
 use App\Models\User;
 use App\Models\Workout;
+use App\Support\Load;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -132,9 +134,10 @@ class ProgramScheduler
     /**
      * Plan every week's load and reps for each blueprint exercise.
      *
-     * Week by week: if last week's session was completed, the rule is checked against what the
-     * client logged (progress or hold). If it was missed, hold. If it hasn't happened yet, plan
-     * the next step assuming it goes to plan.
+     * Each week looks at the day's previous session (skipped weeks and weeks before the start
+     * don't count). Completed: the rule is checked against what the client logged, progress or
+     * hold. Missed: hold. Not happened yet: plan the next step assuming it goes to plan. A
+     * completed session the coach lightened by hand (a deload) doesn't reset the plan.
      *
      * @param  Collection<int, ProgramExercise>  $blueprint
      * @param  Collection<int, Workout>  $sessions  keyed by week
@@ -143,32 +146,43 @@ class ProgramScheduler
     public function plan(Program $program, ProgramDay $day, Collection $blueprint, Collection $sessions): array
     {
         $plan = [];
+        $weeks = $this->scheduledWeeks($program, $day, $sessions);
 
         foreach ($blueprint as $row) {
-            $load = $row->load;
-            $reps = $row->reps;
+            $planned = []; // week => [load, reps] as planned
+            $previousWeek = null;
 
             for ($week = 1; $week <= $program->planned_weeks; $week++) {
                 $changed = [];
                 $reason = null;
+                [$load, $reps] = [$row->load, $row->reps];
 
-                if ($week > $row->base_week) {
-                    $previous = $sessions->get($week - 1);
+                if ($week > $row->base_week && $previousWeek !== null && $previousWeek >= $row->base_week) {
+                    [$load, $reps] = $planned[$previousWeek];
+                    $previous = $sessions->get($previousWeek);
                     $previousItem = $previous?->items->firstWhere('program_exercise_id', $row->id);
 
                     if ($previous && $previous->isCompleted() && $previousItem) {
-                        // Judge last week against what was actually planned for it, with today's rule.
-                        $previousItem->progression = $row->progression;
-                        $previousItem->progression_step = $row->progression_step;
-                        $next = $this->progression->nextPrescription($previousItem);
-                        [$changed, $reason] = [$next['changed_fields'], $next['change_reason']];
-                        [$load, $reps] = [$next['load'], $next['reps']];
+                        $deload = $previous->customized_at !== null
+                            && ($done = Load::toKg($previousItem->load)) !== null
+                            && ($plannedKg = Load::toKg($load)) !== null
+                            && $done < $plannedKg - 0.01;
+
+                        if ($deload) {
+                            $reason = __('After a lighter week :n, picks up where the plan left off', ['n' => $previousWeek]);
+                        } else {
+                            // Judge that week against what it actually prescribed, with today's rule.
+                            $previousItem->progression = $row->progression;
+                            $previousItem->progression_step = $row->progression_step;
+                            $next = $this->progression->nextPrescription($previousItem);
+                            [$changed, $reason, $load, $reps] = [$next['changed_fields'], $next['change_reason'], $next['load'], $next['reps']];
+                        }
                     } elseif ($previous && ! $previous->isCompleted() && $previous->scheduled_on?->lt(today())) {
-                        $reason = in_array($row->progression, ['load', 'reps'], true) ? __('Held: week :n wasn’t completed', ['n' => $week - 1]) : null;
+                        $reason = in_array($row->progression, ['load', 'reps'], true) ? __('Held: week :n wasn’t completed', ['n' => $previousWeek]) : null;
                     } else {
                         $step = $this->progression->advance($load, $reps, $row->progression, $row->progression_step);
                         [$load, $reps, $changed] = [$step['load'], $step['reps'], $step['changed']];
-                        $reason = $changed ? __('Planned: progresses if week :n goes to plan', ['n' => $week - 1]) : null;
+                        $reason = $changed ? __('Planned: progresses if week :n goes to plan', ['n' => $previousWeek]) : null;
                     }
                 }
 
@@ -178,6 +192,12 @@ class ProgramScheduler
                     $reps = $capped;
                     $changed = array_values(array_diff($changed, ['reps']));
                     $reason = $row->progression === 'reps' ? __('Top of the rep range: consider adding load') : $reason;
+                }
+
+                $planned[$week] = [$load, $reps];
+
+                if (in_array($week, $weeks, true)) {
+                    $previousWeek = $week;
                 }
 
                 $plan[$week][$row->id] = array_merge($row->only(ProgramExercise::PRESCRIPTION_FIELDS), [
@@ -192,6 +212,29 @@ class ProgramScheduler
         return $plan;
     }
 
+    /**
+     * Weeks that have a session for this day: on or after the start, not skipped, or already on the calendar.
+     *
+     * @param  Collection<int, Workout>  $sessions
+     * @return array<int, int>
+     */
+    protected function scheduledWeeks(Program $program, ProgramDay $day, Collection $sessions): array
+    {
+        $skipped = $this->skippedWeeks($day);
+        $weeks = [];
+
+        for ($week = 1; $week <= $program->planned_weeks; $week++) {
+            $existing = $sessions->get($week);
+            $scheduled = ! $program->dateFor($week, $day->weekday)->lt($program->starts_on) && ! in_array($week, $skipped, true);
+
+            if (($existing && ! $existing->followsProgram()) || $scheduled) {
+                $weeks[] = $week;
+            }
+        }
+
+        return $weeks;
+    }
+
     protected function capReps(?string $reps, ?string $blueprint): ?string
     {
         if ($reps === null || ! preg_match('/^\s*\d+\s*-\s*(\d+)\s*$/', (string) $blueprint, $range)) {
@@ -202,15 +245,61 @@ class ProgramScheduler
     }
 
     /**
-     * The first week of a day that's still open for planning: not started, not edited by hand.
+     * Where a new starting load or rep target should apply from: the earliest upcoming session
+     * that still follows the program. Earlier weeks (done, missed or edited) keep what they had.
      */
     public function firstOpenWeek(ProgramDay $day): int
     {
-        $locked = Workout::query()->where('program_day_id', $day->id)->with('items')->get()
-            ->reject(fn (Workout $s) => $s->followsProgram())
-            ->max('week');
+        $sessions = Workout::query()->where('program_day_id', $day->id)->with('items')->orderBy('week')->get();
 
-        return min(($locked ?? 0) + 1, 255);
+        $open = $sessions->first(fn (Workout $s) => $s->followsProgram() && $s->scheduled_on && ! $s->scheduled_on->lt(today()));
+
+        if ($open) {
+            return $open->week;
+        }
+
+        // Nothing open from today on yet: apply from the week after the last one on the calendar.
+        return min(((int) $sessions->max('week')) + 1, 255);
+    }
+
+    /**
+     * Move the program's start date. Sessions the client started or the coach edited stay on their
+     * dates (renumbered into the new weeks); everything still following the program is rebuilt.
+     *
+     * @return string|null why it can't move, or null when done
+     */
+    public function moveStart(Program $program, CarbonInterface|string $startsOn): ?string
+    {
+        $startsOn = Carbon::parse($startsOn)->startOfDay();
+        $sessions = Workout::query()->where('program_id', $program->id)->with('items')->get();
+        $locked = $sessions->reject(fn (Workout $s) => $s->followsProgram());
+
+        if ($locked->contains(fn (Workout $s) => $s->scheduled_on && $s->scheduled_on->lt($startsOn->copy()->startOfWeek()))) {
+            return __('Some sessions before that date were already started or edited. Pick a start date on or before :date.', [
+                'date' => $locked->min('scheduled_on')->translatedFormat('j M Y'),
+            ]);
+        }
+
+        DB::transaction(function () use ($program, $startsOn, $sessions, $locked) {
+            $program->update(['starts_on' => $startsOn]);
+
+            $sessions->filter(fn (Workout $s) => $s->followsProgram())->each->delete();
+
+            foreach ($locked as $session) {
+                if ($session->scheduled_on) {
+                    $session->forceFill(['week' => $program->weekOf($session->scheduled_on)])->save();
+                }
+            }
+
+            $lastLocked = (int) $locked->max('week');
+            if ($lastLocked > $program->planned_weeks) {
+                $program->update(['planned_weeks' => min($lastLocked, 52)]);
+            }
+
+            $this->sync($program->fresh());
+        });
+
+        return null;
     }
 
     /**
@@ -218,11 +307,18 @@ class ProgramScheduler
      */
     public function skip(Workout $session): void
     {
-        if ($day = $session->programDay) {
+        $day = $session->programDay;
+
+        if ($day) {
             $day->update(['skipped_weeks' => collect($this->skippedWeeks($day))->push($session->week)->unique()->sort()->values()->all()]);
         }
 
         $session->delete();
+
+        // Later weeks are re-planned: a skipped week doesn't count as a step.
+        if ($day) {
+            $this->syncDay($day->fresh());
+        }
     }
 
     public function unskip(ProgramDay $day, int $week): void
@@ -256,13 +352,13 @@ class ProgramScheduler
      */
     public function reset(Workout $session): void
     {
-        if (! $session->program_day_id || $session->isCompleted()) {
+        // Once the client has logged anything, the session is theirs: resetting would lose their work.
+        if (! $session->program_day_id || $session->load('items')->isStarted()) {
             return;
         }
 
         $session->forceFill(['customized_at' => null])->save();
         $session->items()->whereNull('program_exercise_id')->delete();
-        $session->items()->update(['logged_sets' => null]);
 
         $this->syncDay($session->programDay);
     }

@@ -148,8 +148,8 @@ new #[Title('Exercises')] class extends Component {
         $exercise = Exercise::findOrFail($id);
         Gate::authorize('delete', $exercise);
 
-        if (WorkoutExercise::where('exercise_id', $exercise->id)->exists()) {
-            Flux::toast(variant: 'danger', text: __("This exercise is used in workouts, so it can't be deleted."));
+        if (WorkoutExercise::where('exercise_id', $exercise->id)->exists() || \App\Models\ProgramExercise::where('exercise_id', $exercise->id)->exists()) {
+            Flux::toast(variant: 'danger', text: __("This exercise is used in workouts or programs, so it can't be deleted."));
 
             return;
         }

@@ -401,6 +401,12 @@ class ProgramImporter
                     foreach ($days->values() as $index => $day) {
                         $this->overrideSession($import, $spotterProgram, (int) $week, $index, $blueprintDays->get($index), $day);
                     }
+
+                    // A later week with fewer days than the first: the extra days are skipped that week.
+                    foreach ($blueprintDays->slice($days->count()) as $extraDay) {
+                        $session = Workout::query()->where('program_day_id', $extraDay->id)->where('week', (int) $week)->first();
+                        $session ? app(ProgramScheduler::class)->skip($session) : null;
+                    }
                 }
 
                 $created++;

@@ -241,7 +241,9 @@ new #[Title('Workout builder')] class extends Component {
                 <flux:callout.heading>{{ __('Edited by hand') }}</flux:callout.heading>
                 <flux:callout.text>{{ __('Changes to the program skip this session. Week :week of :program.', ['week' => $workout->week, 'program' => $workout->program?->title]) }}</flux:callout.text>
                 <x-slot name="actions">
-                    <flux:button size="sm" wire:click="resetToProgram" wire:confirm="{{ __('Undo your changes to this session and follow the program again?') }}">{{ __('Reset to program') }}</flux:button>
+                    @unless ($workout->isStarted())
+                        <flux:button size="sm" wire:click="resetToProgram" wire:confirm="{{ __('Undo your changes to this session and follow the program again?') }}">{{ __('Reset to program') }}</flux:button>
+                    @endunless
                     <flux:button size="sm" variant="ghost" :href="route('coach.programs.show', $workout->program_id)" wire:navigate>{{ __('Open program') }}</flux:button>
                 </x-slot>
             </flux:callout>
