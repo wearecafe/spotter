@@ -29,7 +29,7 @@ new #[Layout('layouts::auth')] #[Title('Join a team')] class extends Component {
         $this->token = $token;
         $invitation = $this->invitation();
 
-        if (! Auth::check() && User::where('email', $invitation->email)->exists()) {
+        if (! Auth::check() && $this->accountFor($invitation->email)) {
             // Bring them back here after they log in.
             session()->put('url.intended', route('team-invitation.accept', $token));
         }
@@ -43,9 +43,14 @@ new #[Layout('layouts::auth')] #[Title('Join a team')] class extends Component {
         return TeamInvitation::query()->pending()->where('token', $this->token)->with('team')->firstOrFail();
     }
 
+    protected function accountFor(string $email): bool
+    {
+        return User::whereRaw('lower(email) = ?', [Str::lower($email)])->exists();
+    }
+
     public function existingAccount(): bool
     {
-        return User::where('email', $this->invitation()->email)->exists();
+        return $this->accountFor($this->invitation()->email);
     }
 
     /**
@@ -72,8 +77,11 @@ new #[Layout('layouts::auth')] #[Title('Join a team')] class extends Component {
             return __('You’re already on this team.');
         }
 
-        if ($user->isTeamOwner() && User::where('team_id', $user->team_id)->where('role', Role::Coach)->where('id', '!=', $user->id)->exists()) {
-            return __('You own a team with other coaches. Remove them first, or ask Spotter support to merge teams.');
+        // Clients only travel with a coach who works alone; a gym's clients stay with the gym.
+        if (User::where('team_id', $user->team_id)->where('role', Role::Coach)->where('id', '!=', $user->id)->exists()) {
+            return $user->isTeamOwner()
+                ? __('You own a team with other coaches. Remove them first, or ask Spotter support to merge teams.')
+                : __('You’re a coach on :team. Ask an admin there to remove you first; your clients stay with them.', ['team' => $user->team?->name]);
         }
 
         return null;

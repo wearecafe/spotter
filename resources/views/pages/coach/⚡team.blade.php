@@ -27,6 +27,14 @@ new #[Title('Team')] class extends Component {
 
     public string $handTo = '';
 
+    /**
+     * Re-checked on every action, so a coach who's been demoted can't keep using an open page.
+     */
+    public function hydrate(): void
+    {
+        Gate::authorize('manage-team');
+    }
+
     public function mount(): void
     {
         Gate::authorize('manage-team');

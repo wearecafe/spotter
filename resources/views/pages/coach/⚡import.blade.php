@@ -27,6 +27,14 @@ new #[Title('Import review')] class extends Component {
     /** @var array<int, mixed> */
     public array $moreFiles = [];
 
+    /**
+     * Re-checked on every action: access can change while the page is open (reassignment, removal).
+     */
+    public function hydrate(): void
+    {
+        Gate::authorize('manage-import', $this->import);
+    }
+
     public function mount(Import $import): void
     {
         Gate::authorize('manage-import', $import);

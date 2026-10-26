@@ -30,6 +30,14 @@ new #[Title('Program')] class extends Component {
 
     public const EDITABLE = ['sets', 'reps', 'load', 'target_rpe', 'rest_seconds', 'progression', 'progression_step'];
 
+    /**
+     * Re-checked on every action: access can change while the page is open (reassignment, removal).
+     */
+    public function hydrate(): void
+    {
+        Gate::authorize('manage-program', $this->program);
+    }
+
     public function mount(Program $program): void
     {
         Gate::authorize('manage-program', $program);

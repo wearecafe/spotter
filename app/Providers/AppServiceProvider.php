@@ -40,10 +40,9 @@ class AppServiceProvider extends ServiceProvider
         // A coach manages their own clients; team owners and admins manage the whole team's.
         Gate::define('manage-client', fn (User $coach, User $client): bool => $coach->managesClient($client));
 
-        Gate::define('manage-inbox-item', fn (User $coach, InboxItem $item): bool => $item->coach_id === $coach->id);
+        Gate::define('manage-inbox-item', fn (User $coach, InboxItem $item): bool => $item->coach_id === $coach->id && $coach->managesClient($item->client));
 
-        Gate::define('manage-program', fn (User $coach, Program $program): bool => $coach->isCoach()
-            && ($program->coach_id === $coach->id || $coach->managesClient($program->client)));
+        Gate::define('manage-program', fn (User $coach, Program $program): bool => $coach->managesClient($program->client));
 
         Gate::define('manage-team', fn (User $coach): bool => $coach->isTeamAdmin());
 

@@ -76,6 +76,11 @@ return new class extends Migration
         });
 
         $this->giveEveryCoachAWorkspace();
+
+        // check_ins.week_of is now stored as plain Y-m-d; SQLite rows written earlier carry a time.
+        if (DB::getDriverName() === 'sqlite') {
+            DB::table('check_ins')->update(['week_of' => DB::raw('substr(week_of, 1, 10)')]);
+        }
     }
 
     /**
@@ -83,7 +88,8 @@ return new class extends Migration
      */
     protected function giveEveryCoachAWorkspace(): void
     {
-        DB::table('users')->where('role', 'coach')->whereNull('team_id')->orderBy('id')->each(function ($coach) {
+        // lazyById pages by id, so rows updated inside the loop aren't skipped.
+        DB::table('users')->where('role', 'coach')->whereNull('team_id')->lazyById(200)->each(function ($coach) {
             $teamId = DB::table('teams')->insertGetId([
                 'name' => $coach->business_name ?: $coach->name,
                 'owner_id' => $coach->id,

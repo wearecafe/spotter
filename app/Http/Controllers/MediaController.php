@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CheckIn;
 use App\Models\FormCheck;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,23 +16,23 @@ class MediaController extends Controller
 {
     public function formCheck(Request $request, FormCheck $formCheck): Response
     {
-        $this->authorizeFor($request, $formCheck->client_id, $formCheck->client->coach_id);
+        $this->authorizeFor($request, $formCheck->client);
 
         return $this->stream($formCheck->video_path);
     }
 
     public function checkInPhoto(Request $request, CheckIn $checkIn, int $index): Response
     {
-        $this->authorizeFor($request, $checkIn->client_id, $checkIn->client->coach_id);
+        $this->authorizeFor($request, $checkIn->client);
 
         $path = $checkIn->photos[$index] ?? abort(404);
 
         return $this->stream($path);
     }
 
-    protected function authorizeFor(Request $request, int $clientId, ?int $coachId): void
+    protected function authorizeFor(Request $request, User $client): void
     {
-        abort_unless(in_array($request->user()->id, [$clientId, $coachId], true), 403);
+        abort_unless($request->user()->id === $client->id || $request->user()->managesClient($client), 403);
     }
 
     protected function stream(string $path): Response

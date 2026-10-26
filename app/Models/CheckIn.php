@@ -48,7 +48,7 @@ class CheckIn extends Model
     {
         return static::query()
             ->where('client_id', $this->client_id)
-            ->where('week_of', '<', $this->week_of)
+            ->where('week_of', '<', $this->week_of->toDateString())
             ->latest('week_of')
             ->first();
     }

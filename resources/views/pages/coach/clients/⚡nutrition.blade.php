@@ -19,6 +19,14 @@ new #[Title('Nutrition')] class extends Component {
 
     public string $fat = '';
 
+    /**
+     * Re-checked on every action: access can change while the page is open (reassignment, removal).
+     */
+    public function hydrate(): void
+    {
+        Gate::authorize('manage-client', $this->client);
+    }
+
     public function mount(User $client): void
     {
         Gate::authorize('manage-client', $client);

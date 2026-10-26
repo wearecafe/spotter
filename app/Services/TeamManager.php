@@ -64,6 +64,14 @@ class TeamManager
         DB::transaction(function () use ($invitation, $coach) {
             $previous = $coach->team;
 
+            $alreadyThere = $previous?->id === $invitation->team_id; // brand-new account created straight into the team
+            $solo = $previous === null || $alreadyThere
+                || ! User::query()->where('team_id', $previous->id)->where('role', Role::Coach)->where('id', '!=', $coach->id)->exists();
+
+            if (! $solo) {
+                throw new InvalidArgumentException('Only a coach working alone can bring clients to a new team.');
+            }
+
             $coach->forceFill(['team_id' => $invitation->team_id, 'team_role' => $invitation->role, 'onboarded_at' => $coach->onboarded_at ?? now()])->save();
             User::query()->where('role', Role::Client)->where('coach_id', $coach->id)->update(['team_id' => $invitation->team_id]);
             $invitation->update(['accepted_at' => now()]);

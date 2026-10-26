@@ -24,14 +24,15 @@ class WorkoutPolicy
             return false;
         }
 
-        if ($workout->coach_id === $user->id) {
-            return true;
+        // A client's workouts belong to whoever manages that client now, not whoever wrote them,
+        // so a coach who leaves or hands a client over loses access to their history too.
+        if ($workout->client_id) {
+            return $user->managesClient($workout->client);
         }
 
-        // Team admins can program any team client, and edit teammates' templates.
-        return $workout->client_id
-            ? $user->managesClient($workout->client)
-            : $user->isTeamAdmin() && $workout->coach?->team_id === $user->team_id;
+        // Templates: the author, or a team admin for teammates' templates.
+        return $workout->coach_id === $user->id
+            || ($user->isTeamAdmin() && $workout->coach?->team_id === $user->team_id);
     }
 
     public function delete(User $user, Workout $workout): bool

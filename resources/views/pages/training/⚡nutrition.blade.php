@@ -109,6 +109,7 @@ new #[Title('Nutrition')] class extends Component {
     {
         $this->validate([
             'importSource' => ['required', 'in:macrofactor,myfitnesspal,loseit,csv'],
+            'weightUnit' => ['required', 'in:kg,lb'],
             'importFile' => ['required', 'file', 'mimes:csv,txt,zip', 'max:20480'],
         ], attributes: ['importFile' => __('file')]);
 

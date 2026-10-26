@@ -14,6 +14,14 @@ new #[Title('Messages')] class extends Component {
 
     public string $body = '';
 
+    /**
+     * Re-checked on every action: access can change while the page is open (reassignment, removal).
+     */
+    public function hydrate(): void
+    {
+        Gate::authorize('manage-client', $this->client);
+    }
+
     public function mount(User $client): void
     {
         Gate::authorize('manage-client', $client);

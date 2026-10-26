@@ -39,20 +39,22 @@ class NutritionImporter
      */
     public function read(string $path, string $filename, string $source, string $defaultUnit = 'kg'): array
     {
-        $csvs = Str::lower(pathinfo($filename, PATHINFO_EXTENSION)) === 'zip'
-            ? $this->csvsInZip($path)
-            : [$filename => (string) file_get_contents($path)];
-
         $days = [];
         $detected = null;
 
-        foreach ($csvs as $name => $contents) {
+        $take = function (string $name, string $contents) use (&$days, &$detected, $defaultUnit) {
             $parsed = $this->parseCsv($contents, $defaultUnit);
             $detected ??= $this->detectSource($name, $parsed['headers']);
 
             foreach ($parsed['days'] as $date => $day) {
                 $days[$date] = $this->merge($days[$date] ?? null, $day);
             }
+        };
+
+        if (Str::lower(pathinfo($filename, PATHINFO_EXTENSION)) === 'zip') {
+            $this->eachCsvInZip($path, $take);
+        } else {
+            $take($filename, (string) file_get_contents($path));
         }
 
         krsort($days);
@@ -128,6 +130,16 @@ class NutritionImporter
             return ['headers' => $headers, 'days' => []];
         }
 
+        // Slash dates are month-first (US apps) unless any row proves the file is day-first.
+        $dayFirst = false;
+        foreach (array_slice($lines, 1) as $line) {
+            $raw = str_getcsv($line, $delimiter)[$col['date']] ?? '';
+            if (preg_match('/^\s*(\d{1,2})\/(\d{1,2})\//', $raw, $dm) && (int) $dm[1] > 12) {
+                $dayFirst = true;
+                break;
+            }
+        }
+
         $weightUnit = isset($col['weight'])
             ? (str_contains($headers[$col['weight']], 'lb') ? 'lb' : (str_contains($headers[$col['weight']], 'kg') ? 'kg' : $defaultUnit))
             : null;
@@ -140,7 +152,7 @@ class NutritionImporter
             }
 
             $row = str_getcsv($line, $delimiter);
-            $date = $this->parseDate($row[$col['date']] ?? '');
+            $date = $this->parseDate($row[$col['date']] ?? '', $dayFirst);
 
             if ($date === null) {
                 continue;
@@ -237,14 +249,14 @@ class NutritionImporter
      * Dates come as 2026-10-26, 10/26/2026 (US apps), 26/10/2026, 26.10.2026, "Oct 26, 2026",
      * sometimes with a time attached. Slash dates are read month-first unless that's impossible.
      */
-    public function parseDate(string $value): ?string
+    public function parseDate(string $value, bool $dayFirst = false): ?string
     {
         $value = trim(preg_replace('/[T ]\d{1,2}:\d{2}.*$/', '', trim($value)) ?? '');
 
         if (preg_match('/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/', $value, $m)) {
             [$y, $mo, $d] = [(int) $m[1], (int) $m[2], (int) $m[3]];
         } elseif (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/', $value, $m)) {
-            [$mo, $d, $y] = [(int) $m[1], (int) $m[2], (int) $m[3]];
+            [$mo, $d, $y] = $dayFirst ? [(int) $m[2], (int) $m[1], (int) $m[3]] : [(int) $m[1], (int) $m[2], (int) $m[3]];
             if ($mo > 12 && $d <= 12) {
                 [$mo, $d] = [$d, $mo];
             }
@@ -274,10 +286,19 @@ class NutritionImporter
         return $date->isAfter(today()) ? null : $date->toDateString();
     }
 
+    /** Limits for zip uploads, checked before anything is decompressed. */
+    public const ZIP_MAX_ENTRIES = 20;
+
+    public const ZIP_MAX_ENTRY_BYTES = 15 * 1024 * 1024;
+
+    public const ZIP_MAX_TOTAL_BYTES = 30 * 1024 * 1024;
+
     /**
-     * @return array<string, string>
+     * Hand each nutrition CSV in a zip to $take, one at a time, so memory holds one file at most.
+     *
+     * @param  callable(string, string): void  $take
      */
-    protected function csvsInZip(string $path): array
+    protected function eachCsvInZip(string $path, callable $take): void
     {
         $zip = new ZipArchive;
 
@@ -285,27 +306,52 @@ class NutritionImporter
             throw new RuntimeException('That zip file couldn’t be opened.');
         }
 
-        $csvs = [];
+        try {
+            $entries = [];
+            $total = 0;
 
-        for ($i = 0; $i < min($zip->numFiles, 50); $i++) {
-            $name = (string) $zip->getNameIndex($i);
-            $stat = $zip->statIndex($i);
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $stat = $zip->statIndex($i);
+                $name = (string) ($stat['name'] ?? '');
+                $base = basename($name);
 
-            // Only CSVs at a sensible size; skip folders, macOS metadata and anything huge.
-            if (! str_ends_with(Str::lower($name), '.csv') || str_starts_with(basename($name), '._') || ($stat['size'] ?? 0) > 20 * 1024 * 1024) {
-                continue;
+                // Only CSVs; skip folders, macOS metadata and MyFitnessPal's exercise files.
+                if (! str_ends_with(Str::lower($name), '.csv') || str_starts_with($base, '._') || preg_match('/exercise/i', $base)) {
+                    continue;
+                }
+
+                $size = (int) ($stat['size'] ?? 0);
+
+                if ($size > self::ZIP_MAX_ENTRY_BYTES || count($entries) >= self::ZIP_MAX_ENTRIES) {
+                    throw new RuntimeException('That zip has more data than a nutrition export should.');
+                }
+
+                $total += $size;
+                $entries[$i] = $base;
             }
 
-            // MyFitnessPal also includes exercise files; only nutrition and measurement data matter here.
-            if (preg_match('/exercise/i', basename($name))) {
-                continue;
+            if ($total > self::ZIP_MAX_TOTAL_BYTES) {
+                throw new RuntimeException('That zip has more data than a nutrition export should.');
             }
 
-            $csvs[basename($name)] = (string) $zip->getFromIndex($i);
+            foreach ($entries as $index => $base) {
+                // Read at most the declared size (+1 byte to catch a lying header).
+                $stream = $zip->getStream($zip->getNameIndex($index));
+                $contents = $stream ? (string) stream_get_contents($stream, self::ZIP_MAX_ENTRY_BYTES + 1) : '';
+
+                if ($stream) {
+                    fclose($stream);
+                }
+
+                if (strlen($contents) > self::ZIP_MAX_ENTRY_BYTES) {
+                    throw new RuntimeException('That zip has more data than a nutrition export should.');
+                }
+
+                $take($base, $contents);
+                unset($contents);
+            }
+        } finally {
+            $zip->close();
         }
-
-        $zip->close();
-
-        return $csvs;
     }
 }

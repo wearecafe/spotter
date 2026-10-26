@@ -23,6 +23,14 @@ new #[Title('Workout builder')] class extends Component {
 
     public string $exerciseSearch = '';
 
+    /**
+     * Re-checked on every action: access can change while the page is open (reassignment, removal).
+     */
+    public function hydrate(): void
+    {
+        Gate::authorize('update', $this->workout);
+    }
+
     public function mount(Workout $workout): void
     {
         Gate::authorize('update', $workout);
