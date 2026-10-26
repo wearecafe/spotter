@@ -3,6 +3,7 @@
 use App\Enums\Role;
 use App\Models\StaffAuditLog;
 use App\Models\User;
+use App\Services\Chat;
 use App\Services\InboxFeed;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
@@ -19,6 +20,12 @@ Artisan::command('inbox:scan-missed', function (InboxFeed $feed) {
 })->purpose('Add Coach Inbox items for clients who missed two or more sessions this week');
 
 Schedule::command('inbox:scan-missed')->dailyAt('06:00');
+
+Artisan::command('messages:notify-unread', function (Chat $chat) {
+    $this->info('Emailed '.$chat->notifyUnread().' people about unread messages.');
+})->purpose('Email people about chat messages still unread after a few minutes');
+
+Schedule::command('messages:notify-unread')->everyFiveMinutes()->withoutOverlapping();
 
 Artisan::command('spotter:staff {email} {--revoke}', function (string $email) {
     $user = User::firstWhere('email', strtolower($email));

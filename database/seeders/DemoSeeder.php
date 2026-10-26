@@ -114,6 +114,20 @@ class DemoSeeder extends Seeder
         }
         $feed->messageReceived($message);
 
+        // An ongoing chat with Maya: yesterday's back-and-forth (read) and a fresh question this morning.
+        foreach ([
+            [$maya, 'Quick one: my gym’s squat rack is taken every Tuesday at 6. Can I swap back squats for something?', 26 * 60, true],
+            [$coach, 'Totally. Do goblet squats, 4×8 with the heaviest bell you can hold for all 8. Same tempo.', 25 * 60 + 40, true],
+            [$maya, 'Perfect, thank you!', 25 * 60 + 30, true],
+            [$coach, 'How did the first pull-up negatives feel? Any elbow soreness?', 24 * 60, true],
+            [$maya, 'No soreness! Got 5 slow ones. Lats are definitely feeling it today 😅', 90, false],
+            [$maya, 'Also — should I keep going if I sleep under 6 hours? This week has been rough.', 88, false],
+        ] as [$sender, $body, $minutesAgo, $read]) {
+            Message::create(['coach_id' => $coach->id, 'client_id' => $maya->id, 'sender_id' => $sender->id, 'body' => $body, 'created_at' => now()->subMinutes($minutesAgo), 'read_at' => $read ? now()->subMinutes($minutesAgo - 5) : null, 'notified_at' => now()]);
+        }
+
+        Message::create(['coach_id' => $coach->id, 'client_id' => $priya->id, 'sender_id' => $coach->id, 'body' => 'Great check-in Priya. Keep the hip mobility in every warm-up this week.', 'created_at' => now()->subDays(2), 'read_at' => now()->subDays(2)]);
+
         Workout::create(['coach_id' => $coach->id, 'client_id' => $sarah->id, 'title' => 'Pull day', 'scheduled_on' => today()]);
 
         // Alex runs a gym team with a second coach, who coaches Daniel.

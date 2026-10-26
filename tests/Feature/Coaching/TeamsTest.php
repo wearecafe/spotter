@@ -224,10 +224,10 @@ class TeamsTest extends TestCase
     public function test_messages_follow_the_client_after_reassignment(): void
     {
         $client = User::factory()->clientOf($this->coach)->create();
-        Livewire::actingAs($client)->test('pages::training.messages')->set('body', 'Hello Sam')->call('send');
+        Livewire::actingAs($client)->test('pages::chat.thread', ['client' => $client])->set('body', 'Hello Sam')->call('send');
 
         app(TeamManager::class)->reassign($client->fresh(), $this->owner);
 
-        $this->actingAs($this->owner)->get(route('coach.clients.messages', $client))->assertSee('Hello Sam');
+        $this->actingAs($this->owner)->get(route('coach.messages', ['client' => $client->id]))->assertSee('Hello Sam');
     }
 }

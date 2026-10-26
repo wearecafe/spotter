@@ -16,6 +16,7 @@ class HomePageTest extends TestCase
             ->assertSee('keeps up with your clients.')
             ->assertSee('Build it once. It schedules itself.')
             ->assertSee('Nutrition without another app to manage.')
+            ->assertSee('Talk to clients without giving out your number.')
             ->assertSee('One gym, a whole team of trainers.')
             ->assertSee('Everything that needs you, in one ranked queue.')
             ->assertDontSee('your voice')

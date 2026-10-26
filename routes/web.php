@@ -29,7 +29,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::livewire('inbox/focus', 'pages::coach.inbox-focus')->name('inbox.focus');
         Route::livewire('clients', 'pages::coach.clients.index')->name('clients.index');
         Route::livewire('clients/{client}', 'pages::coach.clients.show')->name('clients.show');
-        Route::livewire('clients/{client}/messages', 'pages::coach.clients.messages')->name('clients.messages');
+        Route::livewire('messages', 'pages::coach.messages')->name('messages');
+        // Older links to a client's conversation open it in Messages.
+        Route::get('clients/{client}/messages', fn (string $client) => redirect()->route('coach.messages', ['client' => $client]))->name('clients.messages');
         Route::livewire('clients/{client}/nutrition', 'pages::coach.clients.nutrition')->name('clients.nutrition');
         Route::livewire('programs/{program}', 'pages::coach.program')->name('programs.show');
         Route::livewire('imports/{import}', 'pages::coach.import')->name('imports.show');
@@ -55,6 +57,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('media/form-checks/{formCheck}', [MediaController::class, 'formCheck'])->name('media.form-check');
     Route::get('media/check-ins/{checkIn}/{index}', [MediaController::class, 'checkInPhoto'])->whereNumber('index')->name('media.check-in-photo');
+    Route::get('media/messages/{message}/{index}', [MediaController::class, 'messagePhoto'])->whereNumber('index')->name('media.message-photo');
 });
 
 require __DIR__.'/settings.php';

@@ -20,6 +20,10 @@
                         <flux:sidebar.item icon="inbox-stack" :href="route('coach.inbox')" :current="request()->routeIs('coach.inbox*')" :badge="$inboxCount ?: null" wire:navigate>
                             {{ __('Inbox') }}
                         </flux:sidebar.item>
+                        @php($unreadMessages = app(\App\Services\Chat::class)->unreadCount(auth()->user()))
+                        <flux:sidebar.item icon="chat-bubble-left-right" :href="route('coach.messages')" :current="request()->routeIs('coach.messages')" :badge="$unreadMessages ?: null" wire:navigate>
+                            {{ __('Messages') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="users" :href="route('coach.clients.index')" :current="request()->routeIs('coach.clients.*')" wire:navigate>
                             {{ __('Clients') }}
                         </flux:sidebar.item>
@@ -49,7 +53,8 @@
                         <flux:sidebar.item icon="chart-pie" :href="route('training.nutrition')" :current="request()->routeIs('training.nutrition')" wire:navigate>
                             {{ __('Nutrition') }}
                         </flux:sidebar.item>
-                        <flux:sidebar.item icon="chat-bubble-left-right" :href="route('training.messages')" :current="request()->routeIs('training.messages')" wire:navigate>
+                        @php($unreadMessages = app(\App\Services\Chat::class)->unreadCount(auth()->user()))
+                        <flux:sidebar.item icon="chat-bubble-left-right" :href="route('training.messages')" :current="request()->routeIs('training.messages')" :badge="$unreadMessages ?: null" wire:navigate>
                             {{ __('Messages') }}
                         </flux:sidebar.item>
                     </flux:sidebar.group>

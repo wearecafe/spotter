@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CheckIn;
 use App\Models\FormCheck;
+use App\Models\Message;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -26,6 +27,15 @@ class MediaController extends Controller
         $this->authorizeFor($request, $checkIn->client);
 
         $path = $checkIn->photos[$index] ?? abort(404);
+
+        return $this->stream($path);
+    }
+
+    public function messagePhoto(Request $request, Message $message, int $index): Response
+    {
+        $this->authorizeFor($request, $message->client);
+
+        $path = $message->photos[$index] ?? abort(404);
 
         return $this->stream($path);
     }

@@ -7,7 +7,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
     <head>
         @include('partials.head', ['title' => __('Programming that keeps up with your clients')])
-        <meta name="description" content="{{ __('Spotter is coaching software for personal trainers and gyms. Build a program once and it schedules itself, progressing from what each client actually lifts. Nutrition tracking, an 870+ exercise library with photos, and one inbox for check-ins, form checks and messages. English and French.') }}">
+        <meta name="description" content="{{ __('Spotter is coaching software for personal trainers and gyms. Build a program once and it schedules itself, progressing from what each client actually lifts. Nutrition tracking, client chat, an 870+ exercise library with photos, and one inbox for check-ins, form checks and messages. English and French.') }}">
         @php($shareTitle = __('Spotter: programming that keeps up with your clients'))
         @php($shareText = __('Build a program once and it schedules itself, progressing from what each client actually lifts. Nutrition, an 870+ exercise library and one inbox for every check-in. For trainers and gyms, in English and French.'))
         <link rel="canonical" href="{{ url('/') }}">
@@ -40,6 +40,7 @@
                 <nav aria-label="{{ __('Main') }}" class="hidden items-center gap-7 text-sm font-medium text-zinc-300 md:flex">
                     <a href="#programs" class="hover:text-white">{{ __('Programs') }}</a>
                     <a href="#nutrition" class="hover:text-white">{{ __('Nutrition') }}</a>
+                    <a href="#chat" class="hover:text-white">{{ __('Chat') }}</a>
                     <a href="#inbox" class="hover:text-white">{{ __('Inbox') }}</a>
                     <a href="#gyms" class="hover:text-white">{{ __('Gyms') }}</a>
                     <a href="#switch" class="hover:text-white">{{ __('Switching') }}</a>
@@ -239,8 +240,43 @@
                 </div>
             </section>
 
+            {{-- Chat --}}
+            <section id="chat" class="scroll-mt-20">
+                <div class="mx-auto grid max-w-6xl items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:py-28">
+                    <div class="relative order-last lg:order-first lg:ps-24">
+                        <img src="{{ asset('images/home/chat.webp') }}" width="2048" height="1360" loading="lazy"
+                             alt="{{ __('The coach’s Messages screen: every client conversation in one list with unread counts, and a chat thread with read receipts.') }}"
+                             class="rounded-2xl border border-zinc-200 shadow-xl">
+                        <div class="absolute -bottom-12 -start-6 hidden w-40 lg:block">
+                            <div class="{{ $phone }} max-w-none border-8">
+                                <img src="{{ asset('images/home/chat-phone.webp') }}" width="780" height="1560" loading="lazy" alt="{{ __('The same conversation in the client’s app on a phone.') }}">
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold uppercase tracking-wider text-brand">{{ __('Chat') }}</p>
+                        <h2 class="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">{{ __('Talk to clients without giving out your number.') }}</h2>
+                        <p class="mt-4 text-lg leading-relaxed text-zinc-600">{{ __('Every client has a direct line to you inside Spotter. Questions, meal photos and quick wins stay next to their program, not scattered across texts and DMs.') }}</p>
+                        <ul class="mt-8 flex flex-col gap-4">
+                            @foreach ([
+                                __('Every conversation in one list, newest first, with unread counts.'),
+                                __('Clients can send photos: a meal, a sore spot, the equipment they have today.'),
+                                __('Read receipts, so you both know a message landed.'),
+                                __('Not in the app? Spotter emails you when a message sits unread for 10 minutes.'),
+                                __('In a gym, the history stays with the client if they change coach, and teammates can step in.'),
+                            ] as $point)
+                                <li class="flex gap-3">
+                                    <span class="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-lime text-xs font-extrabold text-ink" aria-hidden="true">✓</span>
+                                    <span class="leading-relaxed text-zinc-700">{{ $point }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
             {{-- Inbox --}}
-            <section id="inbox" class="scroll-mt-20">
+            <section id="inbox" class="scroll-mt-20 bg-zinc-50">
                 <div class="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:py-28">
                     <div class="max-w-2xl">
                         <p class="text-sm font-bold uppercase tracking-wider text-brand">{{ __('Coach Inbox') }}</p>
@@ -281,7 +317,7 @@
             </section>
 
             {{-- Gyms --}}
-            <section id="gyms" class="scroll-mt-20 bg-zinc-50">
+            <section id="gyms" class="scroll-mt-20">
                 <div class="mx-auto grid max-w-6xl items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:py-28">
                     <img src="{{ asset('images/home/team.webp') }}" width="2048" height="1120" loading="lazy"
                          alt="{{ __('The Team page: the gym owner and a coach, each with their role and client count, and a form to invite another coach.') }}"
@@ -359,7 +395,7 @@
 
                     <div class="mt-14 grid gap-6 lg:grid-cols-3">
                         @foreach ([
-                            ['name' => __('Starter'), 'price' => '$0', 'per' => __('forever'), 'blurb' => __('Try everything with your first clients.'), 'features' => [__('Up to 3 active clients'), __('Recurring programs with progression rules'), __('870+ exercise library with photos'), __('Nutrition tracking and imports'), __('Client app in English and French'), __('Coach Inbox with drafted replies')], 'cta' => __('Start free'), 'featured' => false, 'soon' => false],
+                            ['name' => __('Starter'), 'price' => '$0', 'per' => __('forever'), 'blurb' => __('Try everything with your first clients.'), 'features' => [__('Up to 3 active clients'), __('Recurring programs with progression rules'), __('870+ exercise library with photos'), __('Nutrition tracking and imports'), __('Chat with photos and read receipts'), __('Client app in English and French'), __('Coach Inbox with drafted replies')], 'cta' => __('Start free'), 'featured' => false, 'soon' => false],
                             ['name' => __('Coach'), 'price' => '$39', 'per' => __('per month'), 'blurb' => __('Includes 15 active clients, then $1.50 per extra active client.'), 'features' => [__('Everything in Starter'), __('Unlimited programs and templates'), __('Import from TrueCoach, Trainerize or spreadsheets'), __('Your brand colour and name on the client app')], 'cta' => __('Start free'), 'featured' => true, 'soon' => false],
                             ['name' => __('Team'), 'price' => '$99', 'per' => __('per month'), 'blurb' => __('3 coach seats and 50 active clients.'), 'features' => [__('Everything in Coach'), __('Owners and admins see every client'), __('Shared exercise library and templates'), __('Reassign clients between coaches'), __('An inbox for each coach')], 'cta' => __('Start free'), 'featured' => false, 'soon' => false],
                         ] as $plan)
@@ -446,6 +482,7 @@
                             [__('How does progression work?'), __('Each exercise can add load, add reps or hold. Each time your client finishes a session, Spotter compares what they logged with the plan and re-plans the coming weeks: targets hit means the next step, misses mean it holds.')],
                             [__('Does Spotter track nutrition?'), __('Yes: weight, calories and macros, one entry per day, with targets you set. Clients can also upload exports from MacroFactor, MyFitnessPal or Lose It!. It’s an upload, not a live sync, because those apps don’t offer an open connection.')],
                             [__('Can my whole gym use Spotter?'), __('Yes. Invite your coaches to your team. Each coach sees their own clients; owners and admins see everyone and can reassign clients. The library and templates are shared.')],
+                            [__('Can my clients message me?'), __('Yes. Each client has a chat with you in their app, with photos and read receipts. If a message sits unread for 10 minutes, Spotter emails you, so you don’t have to keep the app open. Client messages also land in your inbox with a reply started.')],
                             [__('Does Spotter message my clients for me?'), __('No. It starts replies for you to finish. Every reply and program change waits for you to approve, edit or dismiss it.')],
                             [__('Do my clients need to download an app?'), __('No. Spotter opens in any phone browser, and clients can add it to their home screen so it feels like an app.')],
                             [__('Can I bring my programs from TrueCoach or Trainerize?'), __('Yes. Upload your client CSV and your program files (PDF or text). Spotter rebuilds each program and asks you to confirm any exercise names it isn’t sure about. Past workout logs usually don’t come across, because those platforms don’t export them.')],

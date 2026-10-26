@@ -221,14 +221,14 @@ class CoachInboxTest extends TestCase
     public function test_client_messages_collect_into_one_item_and_a_coach_reply_clears_it(): void
     {
         foreach (['Can I swap Thursday?', 'Also my gym is closed Friday'] as $text) {
-            Livewire::actingAs($this->client)->test('pages::training.messages')->set('body', $text)->call('send')->assertHasNoErrors();
+            Livewire::actingAs($this->client)->test('pages::chat.thread', ['client' => $this->client])->set('body', $text)->call('send')->assertHasNoErrors();
         }
 
         $item = InboxItem::sole();
         $this->assertSame('message', $item->type);
         $this->assertSame('Also my gym is closed Friday', $item->headline);
 
-        Livewire::actingAs($this->coach)->test('pages::coach.clients.messages', ['client' => $this->client])
+        Livewire::actingAs($this->coach)->test('pages::chat.thread', ['client' => $this->client])
             ->set('body', 'Sure, Thursday moves to Saturday.')
             ->call('send');
 
