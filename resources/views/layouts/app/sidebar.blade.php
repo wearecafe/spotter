@@ -23,6 +23,11 @@
                         <flux:sidebar.item icon="users" :href="route('coach.clients.index')" :current="request()->routeIs('coach.clients.*')" wire:navigate>
                             {{ __('Clients') }}
                         </flux:sidebar.item>
+                        @if (auth()->user()->isTeamAdmin())
+                            <flux:sidebar.item icon="user-group" :href="route('coach.team')" :current="request()->routeIs('coach.team')" wire:navigate>
+                                {{ __('Team') }}
+                            </flux:sidebar.item>
+                        @endif
                     </flux:sidebar.group>
 
                     <flux:sidebar.group :heading="__('Library')" class="grid">
@@ -41,6 +46,9 @@
                         <flux:sidebar.item icon="clipboard-document-check" :href="route('training.check-in')" :current="request()->routeIs('training.check-in')" wire:navigate>
                             {{ __('Check-in') }}
                         </flux:sidebar.item>
+                        <flux:sidebar.item icon="chart-pie" :href="route('training.nutrition')" :current="request()->routeIs('training.nutrition')" wire:navigate>
+                            {{ __('Nutrition') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="chat-bubble-left-right" :href="route('training.messages')" :current="request()->routeIs('training.messages')" wire:navigate>
                             {{ __('Messages') }}
                         </flux:sidebar.item>
@@ -49,6 +57,12 @@
             </flux:sidebar.nav>
 
             <flux:spacer />
+
+            @if (auth()->user()->is_staff)
+                <flux:sidebar.nav>
+                    <flux:sidebar.item icon="shield-check" :href="route('admin.tenants')">{{ __('Spotter backoffice') }}</flux:sidebar.item>
+                </flux:sidebar.nav>
+            @endif
 
             @if (auth()->user()->isClient() && auth()->user()->coach)
                 <div class="px-2 pb-2 text-xs text-zinc-500 dark:text-zinc-400">

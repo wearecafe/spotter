@@ -12,7 +12,7 @@ class WorkoutPolicy
      */
     public function view(User $user, Workout $workout): bool
     {
-        return $workout->coach_id === $user->id || $workout->client_id === $user->id;
+        return $workout->client_id === $user->id || $this->update($user, $workout);
     }
 
     /**
@@ -20,7 +20,19 @@ class WorkoutPolicy
      */
     public function update(User $user, Workout $workout): bool
     {
-        return $user->isCoach() && $workout->coach_id === $user->id;
+        if (! $user->isCoach()) {
+            return false;
+        }
+
+        // A client's workouts belong to whoever manages that client now, not whoever wrote them,
+        // so a coach who leaves or hands a client over loses access to their history too.
+        if ($workout->client_id) {
+            return $user->managesClient($workout->client);
+        }
+
+        // Templates: the author, or a team admin for teammates' templates.
+        return $workout->coach_id === $user->id
+            || ($user->isTeamAdmin() && $workout->coach?->team_id === $user->team_id);
     }
 
     public function delete(User $user, Workout $workout): bool

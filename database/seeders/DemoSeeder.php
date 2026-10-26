@@ -6,11 +6,13 @@ use App\Enums\Role;
 use App\Models\CheckIn;
 use App\Models\Exercise;
 use App\Models\Message;
+use App\Models\NutritionLog;
 use App\Models\Program;
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\InboxFeed;
 use App\Services\Progression;
+use App\Services\TeamManager;
 use Illuminate\Database\Seeder;
 
 /**
@@ -101,6 +103,35 @@ class DemoSeeder extends Seeder
         $feed->messageReceived($message);
 
         Workout::create(['coach_id' => $coach->id, 'client_id' => $sarah->id, 'title' => 'Pull day', 'scheduled_on' => today()]);
+
+        // Alex runs a gym team with a second coach, who coaches Daniel.
+        $coach->team->update(['name' => 'North Shore Strength', 'plan' => 'team']);
+        $sam = User::firstOrNew(['email' => 'sam@example.com']);
+        $sam->forceFill(['name' => 'Sam Patel', 'password' => 'password', 'role' => Role::Coach, 'email_verified_at' => now(), 'team_id' => $coach->team_id, 'team_role' => 'coach', 'onboarded_at' => now(), 'last_seen_at' => now()->subHours(3)])->save();
+        app(TeamManager::class)->reassign($daniel->fresh(), $sam);
+
+        // Two weeks of Maya's nutrition, imported from MacroFactor, against targets.
+        $maya->update(['calorie_target' => 2000, 'protein_target' => 130, 'carbs_target' => 220, 'fat_target' => 65]);
+        foreach (range(13, 0) as $i => $daysAgo) {
+            NutritionLog::updateOrCreate(['client_id' => $maya->id, 'logged_on' => today()->subDays($daysAgo)], [
+                'weight' => $daysAgo % 2 === 0 ? round(64.8 - $i * 0.05, 1) : null,
+                'calories' => [1980, 2050, 1890, 2210, 1950, 2400, 2010, 1930, 2080, 1700, 1990, 2020, 1880, 2060][$i],
+                'protein' => [128, 135, 120, 110, 131, 95, 129, 133, 126, 102, 130, 138, 125, 132][$i],
+                'carbs' => [220, 230, 205, 260, 215, 290, 225, 210, 235, 180, 218, 222, 207, 228][$i],
+                'fat' => [64, 66, 61, 75, 63, 82, 65, 62, 68, 55, 64, 63, 60, 66][$i],
+                'source' => $daysAgo > 2 ? 'macrofactor' : 'manual',
+            ]);
+        }
+
+        // Clients and coaches seen recently, for the backoffice.
+        User::whereIn('id', [$maya->id, $luc->id, $priya->id])->update(['last_seen_at' => now()->subHours(2)]);
+        $coach->forceFill(['last_seen_at' => now()])->save();
+
+        // A second tenant, and a Spotter staff account for the backoffice (staff@example.com / password).
+        $solo = User::firstOrCreate(['email' => 'jordan.coach@example.com'], ['name' => 'Jordan Ellis Coaching', 'password' => 'password', 'role' => Role::Coach, 'email_verified_at' => now()]);
+        User::factory()->count(4)->create(['role' => Role::Client, 'coach_id' => $solo->id, 'invitation_accepted_at' => now()]);
+        $staff = User::firstOrCreate(['email' => 'staff@example.com'], ['name' => 'Spotter Support', 'password' => 'password', 'role' => Role::Coach, 'email_verified_at' => now()]);
+        $staff->forceFill(['is_staff' => true])->save();
         User::updateOrCreate(['email' => 'jordan@example.com'], ['name' => 'Jordan Ellis', 'role' => Role::Client, 'coach_id' => $coach->id, 'invitation_token' => 'demo-invite-jordan']);
     }
 }

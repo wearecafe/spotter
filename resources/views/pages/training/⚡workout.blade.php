@@ -28,6 +28,14 @@ new #[Title('Workout')] class extends Component {
     /** @var array<int, string> */
     public array $videoNotes = [];
 
+    /**
+     * Re-checked on every action: access can change while the page is open (reassignment, removal).
+     */
+    public function hydrate(): void
+    {
+        Gate::authorize('log', $this->workout);
+    }
+
     public function mount(Workout $workout): void
     {
         Gate::authorize('log', $workout);

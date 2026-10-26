@@ -112,7 +112,7 @@ trait HandlesInboxItems
 
         $target = WorkoutExercise::with('workout')->find($suggestion['workout_exercise_id']);
 
-        if (! $target || $target->workout->coach_id !== Auth::id() || $target->workout->isCompleted()) {
+        if (! $target || Gate::denies('update', $target->workout) || $target->workout->isCompleted()) {
             Flux::toast(variant: 'warning', text: __('That workout has changed since the suggestion was made.'));
 
             return;

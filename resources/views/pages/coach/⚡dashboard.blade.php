@@ -17,10 +17,11 @@ new #[Title('Overview')] class extends Component {
     #[Computed]
     public function stats(): array
     {
-        $workouts = Workout::query()->where('coach_id', $this->coach->id)->whereNotNull('client_id');
+        $clientIds = $this->coach->visibleClients()->pluck('id');
+        $workouts = Workout::query()->whereIn('client_id', $clientIds);
 
         return [
-            'clients' => $this->coach->clients()->count(),
+            'clients' => $clientIds->count(),
             'completed_this_week' => (clone $workouts)->whereBetween('completed_at', [now()->startOfWeek(), now()])->count(),
             'scheduled_today' => (clone $workouts)->whereDate('scheduled_on', today())->count(),
             'missed_last_7_days' => (clone $workouts)->whereNull('completed_at')
@@ -34,7 +35,7 @@ new #[Title('Overview')] class extends Component {
     #[Computed]
     public function needsAttention()
     {
-        return $this->coach->clients()
+        return $this->coach->visibleClients()
             ->withCount([
                 'assignedWorkouts as missed_count' => fn ($q) => $q->whereNull('completed_at')
                     ->whereBetween('scheduled_on', [today()->subDays(7), today()->subDay()]),
@@ -55,7 +56,7 @@ new #[Title('Overview')] class extends Component {
     public function recentActivity()
     {
         return Workout::query()
-            ->where('coach_id', $this->coach->id)
+            ->whereIn('client_id', $this->coach->visibleClients()->select('id'))
             ->whereNotNull('completed_at')
             ->with('client')
             ->latest('completed_at')

@@ -41,6 +41,14 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string|null $import_source
  * @property int $contract_months_left
  * @property Carbon|null $onboarded_at
+ * @property int|null $team_id
+ * @property string|null $team_role
+ * @property bool $is_staff
+ * @property Carbon|null $last_seen_at
+ * @property int|null $calorie_target
+ * @property int|null $protein_target
+ * @property int|null $carbs_target
+ * @property int|null $fat_target
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
@@ -52,6 +60,8 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
     'name', 'email', 'password', 'role', 'coach_id', 'goal', 'coach_notes', 'invitation_token', 'invitation_accepted_at', 'invited_at',
     'locale', 'business_name', 'currency', 'coaching_languages', 'client_count_band', 'brand_color', 'logo_path', 'subdomain',
     'import_source', 'contract_months_left', 'onboarded_at',
+    'calorie_target', 'protein_target', 'carbs_target', 'fat_target',
+    // team_id, team_role and is_staff are deliberately not mass assignable.
 ])]
 #[Hidden(['password', 'invitation_token', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements HasLocalePreference
@@ -86,7 +96,89 @@ class User extends Authenticatable implements HasLocalePreference
             'invitation_accepted_at' => 'datetime',
             'invited_at' => 'datetime',
             'onboarded_at' => 'datetime',
+            'is_staff' => 'boolean',
+            'last_seen_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Clients belong to their coach's team.
+        static::creating(function (User $user) {
+            if ($user->role === Role::Client && $user->coach_id && ! $user->team_id) {
+                $user->team_id = User::whereKey($user->coach_id)->value('team_id');
+            }
+        });
+
+        // Every coach works inside a team: their own workspace until they join or build a bigger one.
+        static::created(function (User $user) {
+            if ($user->role === Role::Coach && ! $user->team_id) {
+                $team = Team::create(['name' => $user->business_name ?: $user->name, 'owner_id' => $user->id]);
+                $user->forceFill(['team_id' => $team->id, 'team_role' => 'owner'])->saveQuietly();
+            }
+        });
+    }
+
+    /**
+     * @return BelongsTo<Team, $this>
+     */
+    public function team(): BelongsTo
+    {
+        return $this->belongsTo(Team::class);
+    }
+
+    public function isTeamOwner(): bool
+    {
+        return $this->isCoach() && $this->team_role === 'owner';
+    }
+
+    /**
+     * Owners and admins can see and manage every client in the team.
+     */
+    public function isTeamAdmin(): bool
+    {
+        return $this->isCoach() && in_array($this->team_role, ['owner', 'admin'], true);
+    }
+
+    /**
+     * Whether this coach may manage a client: their own, or any client in the team if they're an admin.
+     */
+    public function managesClient(?User $client): bool
+    {
+        if (! $client || ! $this->isCoach() || ! $client->isClient()) {
+            return false;
+        }
+
+        return $client->coach_id === $this->id
+            || ($this->isTeamAdmin() && $this->team_id !== null && $client->team_id === $this->team_id);
+    }
+
+    /**
+     * Clients this coach can see: their own, or the whole team's for admins.
+     *
+     * @return Builder<User>
+     */
+    public function visibleClients(): Builder
+    {
+        if ($this->isTeamAdmin() && $this->team_id) {
+            return User::query()->where('role', Role::Client)->where('team_id', $this->team_id);
+        }
+
+        return User::query()->where('role', Role::Client)->where('coach_id', $this->id);
+    }
+
+    /**
+     * Ids of every coach in this coach's team (shared exercise library and templates).
+     *
+     * @return array<int, int>
+     */
+    public function teamCoachIds(): array
+    {
+        if (! $this->team_id) {
+            return [$this->id];
+        }
+
+        return User::query()->where('team_id', $this->team_id)->where('role', Role::Coach)->pluck('id')->all();
     }
 
     /**
@@ -121,11 +213,26 @@ class User extends Authenticatable implements HasLocalePreference
     }
 
     /**
-     * The coach whose brand a user sees: themselves if a coach, their coach if a client.
+     * Whose brand a user sees: the team owner's (a gym's brand), falling back to the coach.
      */
     public function brandOwner(): ?User
     {
-        return $this->isCoach() ? $this : $this->coach;
+        $coach = $this->isCoach() ? $this : $this->coach;
+
+        return $coach?->team?->owner ?? $coach;
+    }
+
+    /**
+     * @return HasMany<NutritionLog, $this>
+     */
+    public function nutritionLogs(): HasMany
+    {
+        return $this->hasMany(NutritionLog::class, 'client_id');
+    }
+
+    public function hasNutritionTargets(): bool
+    {
+        return $this->calorie_target !== null || $this->protein_target !== null;
     }
 
     public function hasAcceptedInvitation(): bool

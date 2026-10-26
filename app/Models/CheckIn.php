@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\DateOnly;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
@@ -29,7 +30,7 @@ class CheckIn extends Model
     protected function casts(): array
     {
         return [
-            'week_of' => 'date',
+            'week_of' => DateOnly::class,
             'photos' => 'array',
         ];
     }
@@ -47,7 +48,7 @@ class CheckIn extends Model
     {
         return static::query()
             ->where('client_id', $this->client_id)
-            ->where('week_of', '<', $this->week_of)
+            ->where('week_of', '<', $this->week_of->toDateString())
             ->latest('week_of')
             ->first();
     }

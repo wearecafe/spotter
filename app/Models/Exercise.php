@@ -43,12 +43,12 @@ class Exercise extends Model
     }
 
     /**
-     * Exercises a coach can use: the shared library plus their own.
+     * Exercises a coach can use: the shared library plus any their team has added.
      *
      * @param  Builder<Exercise>  $query
      */
     public function scopeAvailableTo(Builder $query, User $coach): void
     {
-        $query->where(fn (Builder $q) => $q->whereNull('coach_id')->orWhere('coach_id', $coach->id));
+        $query->where(fn (Builder $q) => $q->whereNull('coach_id')->orWhereIn('coach_id', $coach->teamCoachIds()));
     }
 }

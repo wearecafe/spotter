@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Http\Middleware\EnsureStaff;
+use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\TenantGuard;
 use App\Models\Import;
 use App\Models\InboxItem;
 use App\Models\Program;
@@ -12,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -30,14 +34,17 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
 
-        // A coach may manage a client only if that client belongs to them.
-        Gate::define('manage-client', fn (User $coach, User $client): bool => $coach->isCoach()
-            && $client->isClient()
-            && $client->coach_id === $coach->id);
+        // Re-apply these on every Livewire action, not only on the page load.
+        Livewire::addPersistentMiddleware([EnsureUserHasRole::class, EnsureStaff::class, TenantGuard::class]);
 
-        Gate::define('manage-inbox-item', fn (User $coach, InboxItem $item): bool => $item->coach_id === $coach->id);
+        // A coach manages their own clients; team owners and admins manage the whole team's.
+        Gate::define('manage-client', fn (User $coach, User $client): bool => $coach->managesClient($client));
 
-        Gate::define('manage-program', fn (User $coach, Program $program): bool => $coach->isCoach() && $program->coach_id === $coach->id);
+        Gate::define('manage-inbox-item', fn (User $coach, InboxItem $item): bool => $item->coach_id === $coach->id && $coach->managesClient($item->client));
+
+        Gate::define('manage-program', fn (User $coach, Program $program): bool => $coach->managesClient($program->client));
+
+        Gate::define('manage-team', fn (User $coach): bool => $coach->isTeamAdmin());
 
         Gate::define('manage-import', fn (User $coach, Import $import): bool => $import->coach_id === $coach->id);
     }
