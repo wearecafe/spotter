@@ -46,6 +46,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::livewire('{workout}', 'pages::training.workout')->whereNumber('workout')->name('workout');
     });
 
+    // Spotter staff backoffice.
+    Route::middleware('staff')->prefix('admin')->name('admin.')->group(function () {
+        Route::livewire('/', 'pages::admin.tenants')->name('tenants');
+        Route::livewire('tenants/{team}', 'pages::admin.tenant')->name('tenants.show');
+        Route::livewire('audit', 'pages::admin.audit')->name('audit');
+    });
+
     Route::get('media/form-checks/{formCheck}', [MediaController::class, 'formCheck'])->name('media.form-check');
     Route::get('media/check-ins/{checkIn}/{index}', [MediaController::class, 'checkInPhoto'])->whereNumber('index')->name('media.check-in-photo');
 });

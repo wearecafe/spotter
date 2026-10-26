@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Http\Middleware\EnsureStaff;
+use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\TenantGuard;
 use App\Models\Import;
 use App\Models\InboxItem;
 use App\Models\Program;
@@ -12,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -29,6 +33,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // Re-apply these on every Livewire action, not only on the page load.
+        Livewire::addPersistentMiddleware([EnsureUserHasRole::class, EnsureStaff::class, TenantGuard::class]);
 
         // A coach manages their own clients; team owners and admins manage the whole team's.
         Gate::define('manage-client', fn (User $coach, User $client): bool => $coach->managesClient($client));

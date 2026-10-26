@@ -58,6 +58,12 @@
 
             <flux:spacer />
 
+            @if (auth()->user()->is_staff)
+                <flux:sidebar.nav>
+                    <flux:sidebar.item icon="shield-check" :href="route('admin.tenants')">{{ __('Spotter backoffice') }}</flux:sidebar.item>
+                </flux:sidebar.nav>
+            @endif
+
             @if (auth()->user()->isClient() && auth()->user()->coach)
                 <div class="px-2 pb-2 text-xs text-zinc-500 dark:text-zinc-400">
                     {{ __('Coached by :name', ['name' => auth()->user()->coach->name]) }}
