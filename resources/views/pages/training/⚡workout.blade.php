@@ -86,12 +86,16 @@ new #[Title('Workout')] class extends Component {
         $this->workout->update(['completed_at' => now()]);
         $feed->workoutCompleted($this->workout->fresh());
 
+        // Re-plan the coming weeks of the program from what was actually lifted.
+        app(\App\Services\ProgramScheduler::class)->sessionChanged($this->workout);
+
         Flux::toast(variant: 'success', heading: __('Workout complete!'), text: __('Nice work. Your coach can see your results.'));
     }
 
     public function reopen(): void
     {
         $this->workout->update(['completed_at' => null]);
+        app(\App\Services\ProgramScheduler::class)->sessionChanged($this->workout);
     }
 
     public function sendFormCheck(int $itemId, InboxFeed $feed): void

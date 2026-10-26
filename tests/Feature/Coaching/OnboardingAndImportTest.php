@@ -94,7 +94,10 @@ class OnboardingAndImportTest extends TestCase
         $maya = User::firstWhere('email', 'maya@example.com');
         $program = $maya->programs()->sole();
         $this->assertSame('Imported from ABC Trainerize', $program->title);
-        $days = $program->workouts()->with('items.exercise')->get();
+        // The export becomes a blueprint that repeats every week of the program.
+        $this->assertSame(['Day 1 - Lower A', 'Day 2 - Upper'], $program->days()->pluck('title')->all());
+        $this->assertSame(6 * 2, $program->workouts()->count());
+        $days = $program->workouts()->where('week', 1)->orderBy('day')->with('items.exercise')->get();
         $this->assertSame(['Day 1 - Lower A', 'Day 2 - Upper'], $days->pluck('title')->all());
         $squat = $days[0]->items->first();
         $this->assertSame('Back Squat', $squat->exercise->name);

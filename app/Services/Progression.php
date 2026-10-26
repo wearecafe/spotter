@@ -2,41 +2,14 @@
 
 namespace App\Services;
 
-use App\Models\Program;
-use App\Models\Workout;
 use App\Models\WorkoutExercise;
 use App\Support\Load;
-use Illuminate\Support\Facades\DB;
 
 /**
- * Builds the next week of a program from the last one, applying each row's rule
- * against what the client actually did (planned vs actual).
+ * Progression rules: whether a client earned the next step (planned vs actual), and what the step is.
  */
 class Progression
 {
-    public function generateNextWeek(Program $program): int
-    {
-        return DB::transaction(function () use ($program) {
-            $last = $program->lastWeek();
-            $next = $last + 1;
-
-            $lastWeek = $program->workouts()->where('week', $last)->with('items')->get();
-
-            foreach ($lastWeek as $workout) {
-                $copy = $workout->replicate(['scheduled_on', 'completed_at', 'client_feedback', 'reported_at', 'week'])->unsetRelations();
-                $copy->week = $next;
-                $copy->scheduled_on = $workout->scheduled_on?->addWeek();
-                $copy->save();
-
-                foreach ($workout->items as $item) {
-                    $copy->items()->create($this->nextPrescription($item));
-                }
-            }
-
-            return $next;
-        });
-    }
-
     /**
      * @return array<string, mixed>
      */
@@ -127,7 +100,9 @@ class Progression
                 return $reps;
             }
 
-            return min((int) $m[1] + $step, (int) $m[2]).'-'.$m[2];
+            $low = min((int) $m[1] + $step, (int) $m[2]);
+
+            return $low >= (int) $m[2] ? $m[2] : $low.'-'.$m[2];
         }
 
         if (preg_match('/^\s*(\d+)\s*$/', $reps, $m)) {
@@ -138,23 +113,22 @@ class Progression
     }
 
     /**
-     * Create an empty program with its first week of days for a client.
+     * Step a prescription forward once, assuming the client hits it (used to plan future weeks).
+     *
+     * @return array{load: string|null, reps: string|null, changed: array<int, string>}
      */
-    public function start(Program $program, int $daysPerWeek): void
+    public function advance(?string $load, ?string $reps, string $rule, ?string $step): array
     {
-        $labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-        $gap = intdiv(7, max($daysPerWeek, 1));
-
-        for ($day = 1; $day <= $daysPerWeek; $day++) {
-            Workout::create([
-                'coach_id' => $program->coach_id,
-                'client_id' => $program->client_id,
-                'program_id' => $program->id,
-                'week' => 1,
-                'day' => $day,
-                'title' => __('Day :label', ['label' => $labels[$day - 1] ?? $day]),
-                'scheduled_on' => $program->starts_on->addDays(($day - 1) * $gap),
-            ]);
+        if ($rule === 'load' && Load::parse($load)['value'] !== null) {
+            return ['load' => Load::add((string) $load, $step ?: Load::defaultStep($load)), 'reps' => $reps, 'changed' => ['load']];
         }
+
+        if ($rule === 'reps' && $reps !== null) {
+            $next = $this->addReps($reps, (int) ($step ?: 1));
+
+            return ['load' => $load, 'reps' => $next, 'changed' => $next === $reps ? [] : ['reps']];
+        }
+
+        return ['load' => $load, 'reps' => $reps, 'changed' => []];
     }
 }

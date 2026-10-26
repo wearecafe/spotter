@@ -34,7 +34,7 @@ new #[Title('Workout templates')] class extends Component {
     {
         $template = Workout::query()->templates()->whereIn('coach_id', Auth::user()->teamCoachIds())->findOrFail($id);
 
-        $copy = $template->replicate(['reported_at'])->unsetRelations();
+        $copy = $template->replicate(['reported_at', 'program_day_id', 'customized_at'])->unsetRelations();
         $copy->coach_id = Auth::id();
         $copy->title = $template->title.' (copy)';
         $copy->save();
