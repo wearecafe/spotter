@@ -120,7 +120,7 @@ class ReviewRegressionTest extends TestCase
     {
         $coach = User::factory()->create();
         $client = User::factory()->clientOf($coach)->create();
-        $program = $coach->id ? Program::create(['coach_id' => $coach->id, 'client_id' => $client->id, 'title' => 'Block', 'starts_on' => today(), 'planned_weeks' => 4]) : null;
+        $program = Program::create(['coach_id' => $coach->id, 'client_id' => $client->id, 'title' => 'Block', 'starts_on' => today(), 'planned_weeks' => 4]);
         app(Progression::class)->start($program, 2);
 
         Livewire::actingAs($coach)->test('pages::coach.program', ['program' => $program])
