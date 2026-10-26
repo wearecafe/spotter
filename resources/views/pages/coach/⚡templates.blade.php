@@ -38,7 +38,7 @@ new #[Title('Workout templates')] class extends Component {
         $copy->save();
 
         foreach ($template->items as $item) {
-            $copy->items()->create($item->only(['exercise_id', 'position', 'sets', 'reps', 'load', 'rest_seconds', 'notes']));
+            $copy->items()->create($item->only(\App\Models\WorkoutExercise::PRESCRIPTION_FIELDS));
         }
 
         unset($this->templates);

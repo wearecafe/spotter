@@ -28,6 +28,18 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string|null $coach_notes
  * @property string|null $invitation_token
  * @property Carbon|null $invitation_accepted_at
+ * @property Carbon|null $invited_at
+ * @property string $locale
+ * @property string|null $business_name
+ * @property string $currency
+ * @property string $coaching_languages
+ * @property string|null $client_count_band
+ * @property string $brand_color
+ * @property string|null $logo_path
+ * @property string|null $subdomain
+ * @property string|null $import_source
+ * @property int $contract_months_left
+ * @property Carbon|null $onboarded_at
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
@@ -35,7 +47,11 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password', 'role', 'coach_id', 'goal', 'coach_notes', 'invitation_token', 'invitation_accepted_at'])]
+#[Fillable([
+    'name', 'email', 'password', 'role', 'coach_id', 'goal', 'coach_notes', 'invitation_token', 'invitation_accepted_at', 'invited_at',
+    'locale', 'business_name', 'currency', 'coaching_languages', 'client_count_band', 'brand_color', 'logo_path', 'subdomain',
+    'import_source', 'contract_months_left', 'onboarded_at',
+])]
 #[Hidden(['password', 'invitation_token', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -54,6 +70,8 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => Role::class,
             'invitation_accepted_at' => 'datetime',
+            'invited_at' => 'datetime',
+            'onboarded_at' => 'datetime',
         ];
     }
 
@@ -65,6 +83,27 @@ class User extends Authenticatable
     public function isClient(): bool
     {
         return $this->role === Role::Client;
+    }
+
+    public function hasOnboarded(): bool
+    {
+        return $this->onboarded_at !== null;
+    }
+
+    /**
+     * What clients see as this coach's brand.
+     */
+    public function brandName(): string
+    {
+        return $this->business_name ?: $this->name;
+    }
+
+    /**
+     * The coach whose brand a user sees: themselves if a coach, their coach if a client.
+     */
+    public function brandOwner(): ?User
+    {
+        return $this->isCoach() ? $this : $this->coach;
     }
 
     public function hasAcceptedInvitation(): bool
@@ -120,6 +159,38 @@ class User extends Authenticatable
     public function assignedWorkouts(): HasMany
     {
         return $this->hasMany(Workout::class, 'client_id');
+    }
+
+    /**
+     * @return HasMany<Program, $this>
+     */
+    public function programs(): HasMany
+    {
+        return $this->hasMany(Program::class, 'client_id');
+    }
+
+    /**
+     * @return HasMany<CheckIn, $this>
+     */
+    public function checkIns(): HasMany
+    {
+        return $this->hasMany(CheckIn::class, 'client_id');
+    }
+
+    /**
+     * @return HasMany<InboxItem, $this>
+     */
+    public function inboxItems(): HasMany
+    {
+        return $this->hasMany(InboxItem::class, 'coach_id');
+    }
+
+    /**
+     * @return HasMany<Import, $this>
+     */
+    public function imports(): HasMany
+    {
+        return $this->hasMany(Import::class, 'coach_id');
     }
 
     /**

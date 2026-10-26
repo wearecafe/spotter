@@ -23,8 +23,11 @@ use Illuminate\Support\Facades\DB;
  * @property CarbonInterface|null $scheduled_on
  * @property CarbonInterface|null $completed_at
  * @property string|null $client_feedback
+ * @property int|null $program_id
+ * @property int|null $week
+ * @property int|null $day
  */
-#[Fillable(['coach_id', 'client_id', 'template_id', 'title', 'instructions', 'scheduled_on', 'completed_at', 'client_feedback'])]
+#[Fillable(['coach_id', 'client_id', 'template_id', 'title', 'instructions', 'scheduled_on', 'completed_at', 'client_feedback', 'program_id', 'week', 'day'])]
 class Workout extends Model
 {
     /** @use HasFactory<WorkoutFactory> */
@@ -60,6 +63,14 @@ class Workout extends Model
     public function template(): BelongsTo
     {
         return $this->belongsTo(Workout::class, 'template_id');
+    }
+
+    /**
+     * @return BelongsTo<Program, $this>
+     */
+    public function program(): BelongsTo
+    {
+        return $this->belongsTo(Program::class);
     }
 
     /**
@@ -101,14 +112,14 @@ class Workout extends Model
     public function assignTo(User $client, DateTimeInterface|string $date): Workout
     {
         return DB::transaction(function () use ($client, $date) {
-            $copy = $this->replicate(['client_id', 'scheduled_on', 'completed_at', 'client_feedback', 'template_id'])->unsetRelations();
+            $copy = $this->replicate(['client_id', 'scheduled_on', 'completed_at', 'client_feedback', 'template_id', 'program_id', 'week', 'day'])->unsetRelations();
             $copy->client_id = $client->id;
             $copy->scheduled_on = $date;
             $copy->template_id = $this->isTemplate() ? $this->id : $this->template_id;
             $copy->save();
 
             foreach ($this->items as $item) {
-                $copy->items()->create($item->only(['exercise_id', 'position', 'sets', 'reps', 'load', 'rest_seconds', 'notes']));
+                $copy->items()->create($item->only(WorkoutExercise::PRESCRIPTION_FIELDS));
             }
 
             return $copy;

@@ -16,6 +16,10 @@
                         <flux:sidebar.item icon="home" :href="route('coach.dashboard')" :current="request()->routeIs('coach.dashboard')" wire:navigate>
                             {{ __('Overview') }}
                         </flux:sidebar.item>
+                        @php($inboxCount = auth()->user()->inboxItems()->actionable()->count())
+                        <flux:sidebar.item icon="inbox-stack" :href="route('coach.inbox')" :current="request()->routeIs('coach.inbox*')" :badge="$inboxCount ?: null" wire:navigate>
+                            {{ __('Inbox') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="users" :href="route('coach.clients.index')" :current="request()->routeIs('coach.clients.*')" wire:navigate>
                             {{ __('Clients') }}
                         </flux:sidebar.item>
@@ -31,8 +35,14 @@
                     </flux:sidebar.group>
                 @else
                     <flux:sidebar.group :heading="__('Training')" class="grid">
-                        <flux:sidebar.item icon="calendar-days" :href="route('training.index')" :current="request()->routeIs('training.*')" wire:navigate>
+                        <flux:sidebar.item icon="calendar-days" :href="route('training.index')" :current="request()->routeIs('training.index') || request()->routeIs('training.workout')" wire:navigate>
                             {{ __('My workouts') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="clipboard-document-check" :href="route('training.check-in')" :current="request()->routeIs('training.check-in')" wire:navigate>
+                            {{ __('Check-in') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="chat-bubble-left-right" :href="route('training.messages')" :current="request()->routeIs('training.messages')" wire:navigate>
+                            {{ __('Messages') }}
                         </flux:sidebar.item>
                     </flux:sidebar.group>
                 @endif

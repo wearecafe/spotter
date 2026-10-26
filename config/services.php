@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    // Claude powers the Coach Inbox drafts and reads imported program PDFs.
+    // Without a key, Spotter falls back to rule-based drafts and text-only imports.
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-5-5'),
+        'version' => env('ANTHROPIC_VERSION', '2023-06-01'),
+    ],
+
 ];
