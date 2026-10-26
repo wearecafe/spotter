@@ -43,12 +43,13 @@ class Message extends Model
     }
 
     /**
-     * The conversation between a client and their coach.
+     * A client's conversation with their coaching team. It follows the client,
+     * so history isn't lost if they move to another coach in the gym.
      *
      * @param  Builder<Message>  $query
      */
     public function scopeThread(Builder $query, User $client): void
     {
-        $query->where('client_id', $client->id)->where('coach_id', $client->coach_id);
+        $query->where('client_id', $client->id);
     }
 }

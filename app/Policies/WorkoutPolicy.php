@@ -12,7 +12,7 @@ class WorkoutPolicy
      */
     public function view(User $user, Workout $workout): bool
     {
-        return $workout->coach_id === $user->id || $workout->client_id === $user->id;
+        return $workout->client_id === $user->id || $this->update($user, $workout);
     }
 
     /**
@@ -20,7 +20,18 @@ class WorkoutPolicy
      */
     public function update(User $user, Workout $workout): bool
     {
-        return $user->isCoach() && $workout->coach_id === $user->id;
+        if (! $user->isCoach()) {
+            return false;
+        }
+
+        if ($workout->coach_id === $user->id) {
+            return true;
+        }
+
+        // Team admins can program any team client, and edit teammates' templates.
+        return $workout->client_id
+            ? $user->managesClient($workout->client)
+            : $user->isTeamAdmin() && $workout->coach?->team_id === $user->team_id;
     }
 
     public function delete(User $user, Workout $workout): bool

@@ -19,10 +19,25 @@ new #[Title('Clients')] class extends Component {
 
     public string $goal = '';
 
+    /** For team admins: which coach the new client is assigned to, and the list filter. */
+    public string $coachId = '';
+
+    public string $coachFilter = '';
+
+    #[Computed]
+    public function teamCoaches()
+    {
+        return Auth::user()->isTeamAdmin()
+            ? User::query()->whereIn('id', Auth::user()->teamCoachIds())->orderBy('name')->get(['id', 'name'])
+            : collect();
+    }
+
     #[Computed]
     public function clients()
     {
-        return Auth::user()->clients()
+        return Auth::user()->visibleClients()
+            ->when($this->coachFilter !== '', fn ($q) => $q->where('coach_id', (int) $this->coachFilter))
+            ->with('coach:id,name')
             ->when($this->search, fn ($q) => $q->where(fn ($q) => $q
                 ->where('name', 'like', "%{$this->search}%")
                 ->orWhere('email', 'like', "%{$this->search}%")))
@@ -37,16 +52,19 @@ new #[Title('Clients')] class extends Component {
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)],
             'goal' => ['nullable', 'string', 'max:255'],
+            'coachId' => ['nullable', Rule::in(Auth::user()->isTeamAdmin() ? Auth::user()->teamCoachIds() : [Auth::id()])],
         ]);
 
         $client = User::create([
-            ...$validated,
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'goal' => $validated['goal'],
             'role' => Role::Client,
-            'coach_id' => Auth::id(),
+            'coach_id' => $this->coachId !== '' ? (int) $this->coachId : Auth::id(),
             'invitation_token' => Str::random(48),
         ]);
 
-        $this->reset('name', 'email', 'goal');
+        $this->reset('name', 'email', 'goal', 'coachId');
         Flux::modal('add-client')->close();
         Flux::toast(variant: 'success', text: __(':name added. Share their invite link to get them started.', ['name' => $client->name]));
 
@@ -66,7 +84,17 @@ new #[Title('Clients')] class extends Component {
         </flux:modal.trigger>
     </div>
 
-    <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :placeholder="__('Search clients')" class="max-w-sm" />
+    <div class="flex flex-wrap gap-3">
+        <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :placeholder="__('Search clients')" class="max-w-sm" />
+        @if ($this->teamCoaches->count() > 1)
+            <flux:select wire:model.live="coachFilter" class="max-w-56" :aria-label="__('Filter by coach')">
+                <flux:select.option value="">{{ __('All coaches') }}</flux:select.option>
+                @foreach ($this->teamCoaches as $coach)
+                    <flux:select.option :value="$coach->id">{{ $coach->name }}</flux:select.option>
+                @endforeach
+            </flux:select>
+        @endif
+    </div>
 
     @if ($this->clients->isEmpty())
         <flux:card class="flex flex-col items-center gap-3 py-12 text-center">
@@ -80,6 +108,9 @@ new #[Title('Clients')] class extends Component {
         <flux:table>
             <flux:table.columns>
                 <flux:table.column>{{ __('Client') }}</flux:table.column>
+                @if ($this->teamCoaches->count() > 1)
+                    <flux:table.column>{{ __('Coach') }}</flux:table.column>
+                @endif
                 <flux:table.column>{{ __('Goal') }}</flux:table.column>
                 <flux:table.column>{{ __('Next workout') }}</flux:table.column>
                 <flux:table.column>{{ __('30-day compliance') }}</flux:table.column>
@@ -101,6 +132,9 @@ new #[Title('Clients')] class extends Component {
                                 @endunless
                             </a>
                         </flux:table.cell>
+                        @if ($this->teamCoaches->count() > 1)
+                            <flux:table.cell>{{ $client->coach?->name }}</flux:table.cell>
+                        @endif
                         <flux:table.cell>{{ $client->goal ?? '—' }}</flux:table.cell>
                         <flux:table.cell>
                             @if ($next)
@@ -132,6 +166,14 @@ new #[Title('Clients')] class extends Component {
             <flux:input wire:model="name" :label="__('Name')" required />
             <flux:input wire:model="email" :label="__('Email')" type="email" required />
             <flux:input wire:model="goal" :label="__('Goal')" :placeholder="__('e.g. Lose 10 lb, first pull-up')" />
+            @if ($this->teamCoaches->count() > 1)
+                <flux:select wire:model="coachId" :label="__('Coach')">
+                    <flux:select.option value="">{{ __('Me') }}</flux:select.option>
+                    @foreach ($this->teamCoaches->where('id', '!=', auth()->id()) as $coach)
+                        <flux:select.option :value="$coach->id">{{ $coach->name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            @endif
 
             <div class="flex justify-end gap-2">
                 <flux:modal.close>

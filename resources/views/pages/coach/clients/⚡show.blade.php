@@ -56,7 +56,7 @@ new #[Title('Client')] class extends Component {
         ], attributes: ['programTitle' => __('title'), 'programStart' => __('start date')]);
 
         $program = \App\Models\Program::create([
-            'coach_id' => Auth::id(),
+            'coach_id' => $this->client->coach_id,
             'client_id' => $this->client->id,
             'title' => $this->programTitle,
             'starts_on' => $this->programStart,
@@ -71,7 +71,8 @@ new #[Title('Client')] class extends Component {
     #[Computed]
     public function templates()
     {
-        return Auth::user()->templates()->orderBy('title')->get(['id', 'title']);
+        // Templates from anyone on the team.
+        return Workout::query()->templates()->whereIn('coach_id', Auth::user()->teamCoachIds())->orderBy('title')->get(['id', 'title']);
     }
 
     #[Computed]
@@ -111,7 +112,7 @@ new #[Title('Client')] class extends Component {
     {
         $this->validate([
             'scheduledOn' => ['required', 'date'],
-            'templateId' => ['nullable', Rule::exists('workouts', 'id')->where('coach_id', Auth::id())->whereNull('client_id')],
+            'templateId' => ['nullable', Rule::exists('workouts', 'id')->whereIn('coach_id', Auth::user()->teamCoachIds())->whereNull('client_id')],
         ]);
 
         if ($this->templateId) {
@@ -129,7 +130,7 @@ new #[Title('Client')] class extends Component {
         }
 
         $workout = Workout::create([
-            'coach_id' => Auth::id(),
+            'coach_id' => $this->client->coach_id,
             'client_id' => $this->client->id,
             'title' => __('New workout'),
             'scheduled_on' => $this->scheduledOn,
@@ -145,6 +146,25 @@ new #[Title('Client')] class extends Component {
         $workout->delete();
 
         unset($this->upcoming, $this->history);
+    }
+
+    #[Computed]
+    public function teamCoaches()
+    {
+        return Auth::user()->isTeamAdmin()
+            ? \App\Models\User::query()->whereIn('id', Auth::user()->teamCoachIds())->orderBy('name')->get(['id', 'name'])
+            : collect();
+    }
+
+    public function reassign(int $coachId, \App\Services\TeamManager $team): void
+    {
+        abort_unless(Auth::user()->isTeamAdmin(), 403);
+        $coach = \App\Models\User::query()->whereKey($coachId)->whereIn('id', Auth::user()->teamCoachIds())->firstOrFail();
+
+        $team->reassign($this->client, $coach);
+        $this->client->refresh();
+
+        Flux::toast(variant: 'success', text: __(':client is now coached by :coach.', ['client' => $this->client->name, 'coach' => $coach->name]));
     }
 
     public function removeClient(): void
@@ -270,6 +290,18 @@ new #[Title('Client')] class extends Component {
         </div>
 
         <div class="flex flex-col gap-6">
+            @if ($this->teamCoaches->count() > 1)
+                <flux:card class="flex flex-col gap-3">
+                    <flux:heading>{{ __('Coach') }}</flux:heading>
+                    <flux:select wire:change="reassign($event.target.value)" :aria-label="__('Assigned coach')">
+                        @foreach ($this->teamCoaches as $coach)
+                            <flux:select.option :value="$coach->id" :selected="$coach->id === $client->coach_id">{{ $coach->name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                    <flux:text size="sm">{{ __('Upcoming workouts, programs and open inbox items move with the client.') }}</flux:text>
+                </flux:card>
+            @endif
+
             <flux:card>
                 <form wire:submit="saveProfile" class="flex flex-col gap-4">
                     <flux:heading size="lg">{{ __('Profile') }}</flux:heading>

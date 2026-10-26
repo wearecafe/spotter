@@ -13,8 +13,10 @@ new #[Title('Workout templates')] class extends Component {
     #[Computed]
     public function templates()
     {
-        return Auth::user()->templates()
-            ->with('items.exercise')
+        // Everyone on the team shares templates; only the author (or a team admin) can edit one.
+        return Workout::query()->templates()
+            ->whereIn('coach_id', Auth::user()->teamCoachIds())
+            ->with('items.exercise', 'coach:id,name')
             ->orderBy('title')
             ->get();
     }
@@ -30,10 +32,10 @@ new #[Title('Workout templates')] class extends Component {
 
     public function duplicate(int $id): void
     {
-        $template = Workout::findOrFail($id);
-        Gate::authorize('update', $template);
+        $template = Workout::query()->templates()->whereIn('coach_id', Auth::user()->teamCoachIds())->findOrFail($id);
 
         $copy = $template->replicate(['reported_at'])->unsetRelations();
+        $copy->coach_id = Auth::id();
         $copy->title = $template->title.' (copy)';
         $copy->save();
 
@@ -69,13 +71,27 @@ new #[Title('Workout templates')] class extends Component {
         @forelse ($this->templates as $template)
             <flux:card class="flex flex-col gap-3" wire:key="template-{{ $template->id }}">
                 <div class="flex items-start justify-between gap-2">
-                    <a href="{{ route('coach.workouts.edit', $template) }}" wire:navigate class="text-lg font-semibold text-zinc-900 hover:underline dark:text-white">{{ $template->title }}</a>
+                    @php($canEdit = auth()->user()->can('update', $template))
+                    <div class="min-w-0">
+                        @if ($canEdit)
+                            <a href="{{ route('coach.workouts.edit', $template) }}" wire:navigate class="text-lg font-semibold text-zinc-900 hover:underline dark:text-white">{{ $template->title }}</a>
+                        @else
+                            <span class="text-lg font-semibold text-zinc-900 dark:text-white">{{ $template->title }}</span>
+                        @endif
+                        @if ($template->coach_id !== auth()->id())
+                            <flux:text size="sm">{{ __('By :name', ['name' => $template->coach?->name]) }}</flux:text>
+                        @endif
+                    </div>
                     <flux:dropdown align="end">
-                        <flux:button size="sm" variant="ghost" icon="ellipsis-horizontal" />
+                        <flux:button size="sm" variant="ghost" icon="ellipsis-horizontal" :aria-label="__('Template actions')" />
                         <flux:menu>
-                            <flux:menu.item icon="pencil-square" :href="route('coach.workouts.edit', $template)" wire:navigate>{{ __('Edit') }}</flux:menu.item>
-                            <flux:menu.item icon="document-duplicate" wire:click="duplicate({{ $template->id }})">{{ __('Duplicate') }}</flux:menu.item>
-                            <flux:menu.item icon="trash" variant="danger" wire:click="delete({{ $template->id }})" wire:confirm="{{ __('Delete this template? Workouts already scheduled are kept.') }}">{{ __('Delete') }}</flux:menu.item>
+                            @if ($canEdit)
+                                <flux:menu.item icon="pencil-square" :href="route('coach.workouts.edit', $template)" wire:navigate>{{ __('Edit') }}</flux:menu.item>
+                            @endif
+                            <flux:menu.item icon="document-duplicate" wire:click="duplicate({{ $template->id }})">{{ $canEdit ? __('Duplicate') : __('Copy to my templates') }}</flux:menu.item>
+                            @if ($canEdit)
+                                <flux:menu.item icon="trash" variant="danger" wire:click="delete({{ $template->id }})" wire:confirm="{{ __('Delete this template? Workouts already scheduled are kept.') }}">{{ __('Delete') }}</flux:menu.item>
+                            @endif
                         </flux:menu>
                     </flux:dropdown>
                 </div>

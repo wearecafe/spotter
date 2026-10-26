@@ -116,6 +116,8 @@ class Workout extends Model
         return DB::transaction(function () use ($client, $date) {
             $copy = $this->replicate(['client_id', 'scheduled_on', 'completed_at', 'client_feedback', 'reported_at', 'template_id', 'program_id', 'week', 'day'])->unsetRelations();
             $copy->client_id = $client->id;
+            // The client's own coach owns the copy, even when a teammate's template was used.
+            $copy->coach_id = $client->coach_id ?? $this->coach_id;
             $copy->scheduled_on = $date;
             $copy->template_id = $this->isTemplate() ? $this->id : $this->template_id;
             $copy->save();
