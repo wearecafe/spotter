@@ -69,6 +69,7 @@ class CoachAssistant
                 ? round((float) $subject->weight - (float) $previous->weight, 1)
                 : null;
             $context['sessions'] = $this->sessionsThisWeek($client);
+            $context['nutrition'] = app(NutritionSummary::class)->sentence($client);
         }
 
         if ($subject instanceof FormCheck) {
@@ -244,6 +245,10 @@ class CoachAssistant
             );
         }
 
+        if ($n = $context['nutrition'] ?? null) {
+            $lines[] = 'NUTRITION (last 7 days): '.$n;
+        }
+
         if ($f = $context['form_check'] ?? null) {
             $lines[] = 'FORM CHECK video of '.$f->workoutExercise->exercise->name.'. Client note: '.($f->note ?: 'none').'. (You cannot see the video; ask the coach to review it.)';
         }
@@ -312,7 +317,9 @@ class CoachAssistant
                 if ($context['sessions']['scheduled'] > 0) {
                     $parts[] = __(':done of :total sessions', ['done' => $context['sessions']['done'], 'total' => $context['sessions']['scheduled']]);
                 }
-                $summary = ucfirst(implode(', ', $parts)).'.'.($c->notes ? ' “'.Str::limit($c->notes, 160).'”' : '');
+                $summary = ucfirst(implode(', ', $parts)).'.'
+                    .(($context['nutrition'] ?? null) ? ' '.$context['nutrition'] : '')
+                    .($c->notes ? ' “'.Str::limit($c->notes, 160).'”' : '');
 
                 $struggling = ($c->energy !== null && $c->energy <= 2) || ($c->stress !== null && $c->stress >= 4);
                 if ($struggling) {

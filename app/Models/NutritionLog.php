@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\DateOnly;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
@@ -34,7 +35,7 @@ class NutritionLog extends Model
 
     protected function casts(): array
     {
-        return ['logged_on' => 'date'];
+        return ['logged_on' => DateOnly::class, 'weight' => 'decimal:1'];
     }
 
     /** @return BelongsTo<User, $this> */

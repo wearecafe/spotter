@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\DateOnly;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
@@ -29,7 +30,7 @@ class CheckIn extends Model
     protected function casts(): array
     {
         return [
-            'week_of' => 'date',
+            'week_of' => DateOnly::class,
             'photos' => 'array',
         ];
     }

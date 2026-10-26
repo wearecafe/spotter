@@ -187,6 +187,7 @@ new #[Title('Client')] class extends Component {
         </div>
 
         <div class="flex items-center gap-2">
+            <flux:button size="sm" icon="chart-pie" :href="route('coach.clients.nutrition', $client)" wire:navigate>{{ __('Nutrition') }}</flux:button>
             <flux:button size="sm" icon="chat-bubble-left-right" :href="route('coach.clients.messages', $client)" wire:navigate>{{ __('Messages') }}</flux:button>
             @php($compliance = $client->complianceRate())
             @if ($compliance !== null)

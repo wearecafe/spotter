@@ -46,6 +46,9 @@
                         <flux:sidebar.item icon="clipboard-document-check" :href="route('training.check-in')" :current="request()->routeIs('training.check-in')" wire:navigate>
                             {{ __('Check-in') }}
                         </flux:sidebar.item>
+                        <flux:sidebar.item icon="chart-pie" :href="route('training.nutrition')" :current="request()->routeIs('training.nutrition')" wire:navigate>
+                            {{ __('Nutrition') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="chat-bubble-left-right" :href="route('training.messages')" :current="request()->routeIs('training.messages')" wire:navigate>
                             {{ __('Messages') }}
                         </flux:sidebar.item>
