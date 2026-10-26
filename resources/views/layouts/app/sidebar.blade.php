@@ -23,6 +23,11 @@
                         <flux:sidebar.item icon="users" :href="route('coach.clients.index')" :current="request()->routeIs('coach.clients.*')" wire:navigate>
                             {{ __('Clients') }}
                         </flux:sidebar.item>
+                        @if (auth()->user()->isTeamAdmin())
+                            <flux:sidebar.item icon="user-group" :href="route('coach.team')" :current="request()->routeIs('coach.team')" wire:navigate>
+                                {{ __('Team') }}
+                            </flux:sidebar.item>
+                        @endif
                     </flux:sidebar.group>
 
                     <flux:sidebar.group :heading="__('Library')" class="grid">
