@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $id
  * @property int $workout_id
  * @property int $exercise_id
+ * @property int|null $program_exercise_id
  * @property int $position
  * @property int $sets
  * @property string|null $reps
@@ -26,7 +27,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $change_reason
  * @property array<int, array{reps: string|null, load: string|null, rpe?: string|null, done: bool}>|null $logged_sets
  */
-#[Fillable(['exercise_id', 'position', 'sets', 'reps', 'load', 'target_rpe', 'rest_seconds', 'notes', 'progression', 'progression_step', 'changed_fields', 'change_reason', 'logged_sets'])]
+#[Fillable(['exercise_id', 'program_exercise_id', 'position', 'sets', 'reps', 'load', 'target_rpe', 'rest_seconds', 'notes', 'progression', 'progression_step', 'changed_fields', 'change_reason', 'logged_sets'])]
 class WorkoutExercise extends Model
 {
     /** Fields that describe what the coach prescribed (copied when a workout is assigned or duplicated). */

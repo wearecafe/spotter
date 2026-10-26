@@ -67,8 +67,11 @@ new #[Title('Workout builder')] class extends Component {
             ->when($this->exerciseSearch, fn ($q) => $q->where(fn ($q) => $q
                 ->where('name', 'like', "%{$this->exerciseSearch}%")
                 ->orWhere('muscle_group', 'like', "%{$this->exerciseSearch}%")))
+            ->orderByRaw('case when name like ? then 0 else 1 end', [$this->exerciseSearch.'%'])
+            // Your team's exercises, then Spotter's starter list, then the wider open library.
+            ->orderByRaw("case when coach_id is not null then 0 when source = 'free-exercise-db' then 2 else 1 end")
             ->orderBy('name')
-            ->limit(12)
+            ->limit(20)
             ->get();
     }
 
@@ -88,14 +91,24 @@ new #[Title('Workout builder')] class extends Component {
             'items.*.rest_seconds' => 'rest',
         ]);
 
-        $this->workout->update([
+        $this->workout->fill([
             'title' => $this->title,
             'instructions' => $this->instructions ?: null,
             'scheduled_on' => $this->workout->isTemplate() ? null : $this->scheduledOn,
         ]);
+        $changed = $this->workout->isDirty();
+        $this->workout->save();
+
+        $existing = $this->workout->items()->get()->keyBy('id');
 
         foreach ($this->items as $position => $item) {
-            $this->workout->items()->whereKey($item['id'])->update([
+            $row = $existing->get($item['id']);
+
+            if (! $row) {
+                continue;
+            }
+
+            $row->fill([
                 'position' => $position,
                 'sets' => (int) $item['sets'],
                 'reps' => $item['reps'] ?: null,
@@ -103,11 +116,38 @@ new #[Title('Workout builder')] class extends Component {
                 'rest_seconds' => $item['rest_seconds'] === '' ? null : (int) $item['rest_seconds'],
                 'notes' => $item['notes'] ?: null,
             ]);
+            $changed = $changed || $row->isDirty();
+            $row->save();
+        }
+
+        // A program session edited by hand stops following program edits.
+        if ($changed) {
+            $this->markEdited();
         }
 
         if ($notify) {
             Flux::toast(variant: 'success', text: __('Workout saved.'));
         }
+    }
+
+    protected function markEdited(): void
+    {
+        app(\App\Services\ProgramScheduler::class)->customize($this->workout);
+    }
+
+    /**
+     * Put a hand-edited program session back on the program.
+     */
+    public function resetToProgram(): void
+    {
+        app(\App\Services\ProgramScheduler::class)->reset($this->workout);
+        $this->workout->refresh();
+        $this->title = $this->workout->title;
+        $this->instructions = (string) $this->workout->instructions;
+        $this->scheduledOn = (string) $this->workout->scheduled_on?->toDateString();
+        $this->loadItems();
+
+        Flux::toast(variant: 'success', text: __('Back on the program.'));
     }
 
     public function addExercise(int $exerciseId): void
@@ -123,6 +163,7 @@ new #[Title('Workout builder')] class extends Component {
             'reps' => '10',
         ]);
 
+        $this->markEdited();
         $this->loadItems();
         Flux::modal('exercise-picker')->close();
         $this->exerciseSearch = '';
@@ -133,6 +174,7 @@ new #[Title('Workout builder')] class extends Component {
         $this->save(notify: false);
 
         $this->workout->items()->whereKey($this->items[$index]['id'] ?? 0)->delete();
+        $this->markEdited();
         unset($this->items[$index]);
         $this->items = array_values($this->items);
 
@@ -156,7 +198,7 @@ new #[Title('Workout builder')] class extends Component {
     {
         $this->save(notify: false);
 
-        $template = $this->workout->replicate(['client_id', 'scheduled_on', 'completed_at', 'client_feedback', 'reported_at', 'template_id', 'program_id', 'week', 'day'])->unsetRelations();
+        $template = $this->workout->replicate(['client_id', 'scheduled_on', 'completed_at', 'client_feedback', 'reported_at', 'template_id', 'program_id', 'week', 'day', 'program_day_id', 'customized_at'])->unsetRelations();
         $template->client_id = null;
         $template->save();
 
@@ -192,6 +234,29 @@ new #[Title('Workout builder')] class extends Component {
             <flux:button variant="primary" wire:click="save" data-test="save-workout-button">{{ __('Save') }}</flux:button>
         </div>
     </div>
+
+    @if ($workout->program_day_id && ! $workout->isCompleted())
+        @if ($workout->customized_at)
+            <flux:callout icon="pencil-square" color="amber">
+                <flux:callout.heading>{{ __('Edited by hand') }}</flux:callout.heading>
+                <flux:callout.text>{{ __('Changes to the program skip this session. Week :week of :program.', ['week' => $workout->week, 'program' => $workout->program?->title]) }}</flux:callout.text>
+                <x-slot name="actions">
+                    @unless ($workout->isStarted())
+                        <flux:button size="sm" wire:click="resetToProgram" wire:confirm="{{ __('Undo your changes to this session and follow the program again?') }}">{{ __('Reset to program') }}</flux:button>
+                    @endunless
+                    <flux:button size="sm" variant="ghost" :href="route('coach.programs.show', $workout->program_id)" wire:navigate>{{ __('Open program') }}</flux:button>
+                </x-slot>
+            </flux:callout>
+        @else
+            <flux:callout icon="calendar-days">
+                <flux:callout.heading>{{ __('Week :week of :program', ['week' => $workout->week, 'program' => $workout->program?->title]) }}</flux:callout.heading>
+                <flux:callout.text>{{ __('Changes here apply to this session only. To change every week, edit the program.') }}</flux:callout.text>
+                <x-slot name="actions">
+                    <flux:button size="sm" :href="route('coach.programs.show', $workout->program_id)" wire:navigate>{{ __('Edit program') }}</flux:button>
+                </x-slot>
+            </flux:callout>
+        @endif
+    @endif
 
     @if ($workout->isCompleted())
         <flux:callout icon="check-circle" color="green">
@@ -277,8 +342,15 @@ new #[Title('Workout builder')] class extends Component {
             <div class="flex max-h-96 flex-col divide-y divide-zinc-100 overflow-y-auto dark:divide-zinc-700">
                 @forelse ($this->exerciseResults as $exercise)
                     <button type="button" wire:click="addExercise({{ $exercise->id }})" wire:key="pick-{{ $exercise->id }}" class="flex items-center justify-between gap-3 px-1 py-2 text-start hover:bg-zinc-50 dark:hover:bg-zinc-700/50">
-                        <span class="font-medium text-zinc-900 dark:text-white">{{ $exercise->name }}</span>
-                        <span class="text-sm text-zinc-500">{{ $exercise->muscle_group }}</span>
+                        <span class="flex min-w-0 items-center gap-3">
+                            @if ($thumb = $exercise->imageUrls()[0] ?? null)
+                                <img src="{{ $thumb }}" alt="" loading="lazy" class="size-9 shrink-0 rounded bg-zinc-100 object-cover">
+                            @else
+                                <span class="size-9 shrink-0 rounded bg-zinc-100 dark:bg-zinc-800"></span>
+                            @endif
+                            <span class="truncate font-medium text-zinc-900 dark:text-white">{{ $exercise->name }}</span>
+                        </span>
+                        <span class="shrink-0 text-sm text-zinc-500">{{ collect([$exercise->muscle_group, $exercise->equipment])->filter()->implode(' · ') }}</span>
                     </button>
                 @empty
                     <flux:text class="py-4">{{ __('No matches. You can add custom exercises in your library.') }}</flux:text>

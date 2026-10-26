@@ -45,8 +45,35 @@ class Program extends Model
         return $this->hasMany(Workout::class)->orderBy('week')->orderBy('day');
     }
 
+    /** @return HasMany<ProgramDay, $this> */
+    public function days(): HasMany
+    {
+        return $this->hasMany(ProgramDay::class)->orderBy('position')->orderBy('id');
+    }
+
     public function lastWeek(): int
     {
-        return (int) $this->workouts()->max('week');
+        return max((int) $this->workouts()->max('week'), $this->planned_weeks);
+    }
+
+    /**
+     * The calendar date for a weekday in a program week. Week 1 is the week the program starts in.
+     */
+    public function dateFor(int $week, int $weekday): CarbonInterface
+    {
+        return $this->starts_on->startOfWeek()->addWeeks($week - 1)->addDays($weekday - 1);
+    }
+
+    public function endsOn(): CarbonInterface
+    {
+        return $this->starts_on->startOfWeek()->addWeeks($this->planned_weeks)->subDay();
+    }
+
+    /**
+     * The week a date falls in, counting the start week as week 1.
+     */
+    public function weekOf(CarbonInterface $date): int
+    {
+        return (int) floor($this->starts_on->startOfWeek()->diffInDays($date->startOfDay(), false) / 7) + 1;
     }
 }

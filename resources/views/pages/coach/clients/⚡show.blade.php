@@ -21,6 +21,8 @@ new #[Title('Client')] class extends Component {
 
     public string $scheduledOn = '';
 
+    public int $repeatWeeks = 1;
+
     public string $programTitle = '';
 
     public string $programStart = '';
@@ -54,7 +56,7 @@ new #[Title('Client')] class extends Component {
         return $this->client->programs()->withMax('workouts', 'week')->latest()->get();
     }
 
-    public function createProgram(\App\Services\Progression $progression): void
+    public function createProgram(\App\Services\ProgramScheduler $scheduler): void
     {
         $this->validate([
             'programTitle' => ['required', 'string', 'max:120'],
@@ -63,15 +65,7 @@ new #[Title('Client')] class extends Component {
             'programWeeks' => ['required', 'integer', 'between:1,52'],
         ], attributes: ['programTitle' => __('title'), 'programStart' => __('start date')]);
 
-        $program = \App\Models\Program::create([
-            'coach_id' => $this->client->coach_id,
-            'client_id' => $this->client->id,
-            'title' => $this->programTitle,
-            'starts_on' => $this->programStart,
-            'planned_weeks' => $this->programWeeks,
-        ]);
-
-        $progression->start($program, $this->programDays);
+        $program = $scheduler->create($this->client, $this->programTitle, $this->programStart, $this->programWeeks, $this->programDays);
 
         $this->redirectRoute('coach.programs.show', $program, navigate: true);
     }
@@ -124,12 +118,18 @@ new #[Title('Client')] class extends Component {
         ]);
 
         if ($this->templateId) {
-            $workout = Workout::findOrFail($this->templateId)->assignTo($this->client, $this->scheduledOn);
+            $this->validate(['repeatWeeks' => ['required', 'integer', 'between:1,26']]);
+            $template = Workout::findOrFail($this->templateId);
+            $first = \Illuminate\Support\Carbon::parse($this->scheduledOn);
 
-            Flux::toast(variant: 'success', text: __(':title scheduled for :date.', [
-                'title' => $workout->title,
-                'date' => $workout->scheduled_on->format('D, M j'),
-            ]));
+            foreach (range(0, $this->repeatWeeks - 1) as $i) {
+                $workout = $template->assignTo($this->client, $first->copy()->addWeeks($i));
+            }
+
+            Flux::toast(variant: 'success', text: $this->repeatWeeks > 1
+                ? __(':title scheduled every :day for :count weeks.', ['title' => $template->title, 'day' => $first->translatedFormat('l'), 'count' => $this->repeatWeeks])
+                : __(':title scheduled for :date.', ['title' => $template->title, 'date' => $first->translatedFormat('D j M')]));
+            $this->repeatWeeks = 1;
 
             $this->templateId = '';
             unset($this->upcoming);
@@ -151,7 +151,9 @@ new #[Title('Client')] class extends Component {
     {
         $workout = $this->client->assignedWorkouts()->findOrFail($workoutId);
         Gate::authorize('delete', $workout);
-        $workout->delete();
+
+        // A program session is skipped rather than deleted, so the program doesn't put it back.
+        $workout->program_day_id ? app(\App\Services\ProgramScheduler::class)->skip($workout) : $workout->delete();
 
         unset($this->upcoming, $this->history);
     }
@@ -236,7 +238,8 @@ new #[Title('Client')] class extends Component {
             </flux:card>
 
             <flux:card class="flex flex-col gap-4">
-                <flux:heading size="lg">{{ __('Schedule a single workout') }}</flux:heading>
+                <flux:heading size="lg">{{ __('Schedule a workout') }}</flux:heading>
+                <flux:text size="sm">{{ __('For a multi-week plan, create a program above: it schedules every session for you.') }}</flux:text>
                 <form wire:submit="schedule" class="flex flex-col gap-4 sm:flex-row sm:items-end">
                     <flux:select wire:model="templateId" :label="__('From template')" class="sm:flex-1">
                         <flux:select.option value="">{{ __('Blank workout (build from scratch)') }}</flux:select.option>
@@ -245,6 +248,12 @@ new #[Title('Client')] class extends Component {
                         @endforeach
                     </flux:select>
                     <flux:input wire:model="scheduledOn" type="date" :label="__('Date')" class="sm:w-44" />
+                    <flux:select wire:model="repeatWeeks" :label="__('Repeat')" class="sm:w-40">
+                        <flux:select.option value="1">{{ __('Just once') }}</flux:select.option>
+                        @foreach ([2, 3, 4, 6, 8, 12] as $n)
+                            <flux:select.option :value="$n">{{ __('Weekly for :n weeks', ['n' => $n]) }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
                     <flux:button type="submit" variant="primary" data-test="schedule-workout-button">{{ __('Schedule') }}</flux:button>
                 </form>
             </flux:card>

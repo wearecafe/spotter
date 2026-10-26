@@ -6,9 +6,9 @@ use App\Enums\Role;
 use App\Models\Exercise;
 use App\Models\Import;
 use App\Models\Program;
+use App\Models\ProgramDay;
 use App\Models\User;
 use App\Models\Workout;
-use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -382,18 +382,30 @@ class ProgramImporter
                 $weeks = collect($program['days'])->groupBy(fn ($day) => $day['week'] ?? 1)->sortKeys();
 
                 $spotterProgram = Program::create([
-                    'coach_id' => $coach->id,
+                    'coach_id' => $client->coach_id ?? $coach->id,
                     'client_id' => $client->id,
                     'title' => __('Imported from :source', ['source' => $import->sourceLabel()]),
                     'starts_on' => $startsOn,
                     'planned_weeks' => max(6, (int) $weeks->keys()->max()),
                 ]);
 
-                foreach ($weeks as $week => $days) {
-                    $gap = max(1, intdiv(7, max($days->count(), 1)));
+                // The first imported week becomes the program blueprint, repeated every week…
+                $firstWeek = $weeks->first()->values()->take(7);
+                $weekdays = ProgramScheduler::DEFAULT_WEEKDAYS[max(1, $firstWeek->count())];
+                $blueprintDays = $firstWeek->map(fn ($day, $index) => $this->createBlueprintDay($import, $spotterProgram, $index, $weekdays[$index], $day));
 
+                app(ProgramScheduler::class)->sync($spotterProgram);
+
+                // …and any later weeks in the export keep exactly what the old platform had.
+                foreach ($weeks->slice(1) as $week => $days) {
                     foreach ($days->values() as $index => $day) {
-                        $this->createImportedDay($import, $spotterProgram, (int) $week, $index, $day, $startsOn->addWeeks((int) $week - 1)->addDays(min($index * $gap, 6)));
+                        $this->overrideSession($import, $spotterProgram, (int) $week, $index, $blueprintDays->get($index), $day);
+                    }
+
+                    // A later week with fewer days than the first: the extra days are skipped that week.
+                    foreach ($blueprintDays->slice($days->count()) as $extraDay) {
+                        $session = Workout::query()->where('program_day_id', $extraDay->id)->where('week', (int) $week)->first();
+                        $session ? app(ProgramScheduler::class)->skip($session) : null;
                     }
                 }
 
@@ -413,34 +425,67 @@ class ProgramImporter
     /**
      * @param  array{title: string, rows: array<int, array<string, mixed>>}  $day
      */
-    protected function createImportedDay(Import $import, Program $program, int $week, int $index, array $day, CarbonInterface $date): void
+    protected function createBlueprintDay(Import $import, Program $program, int $index, int $weekday, array $day): ProgramDay
     {
-        $workout = Workout::create([
+        $blueprint = $program->days()->create(['position' => $index + 1, 'title' => $day['title'], 'weekday' => $weekday]);
+
+        foreach ($this->importedRows($import, $day) as $position => $row) {
+            $blueprint->exercises()->create($row + ['position' => $position]);
+        }
+
+        return $blueprint;
+    }
+
+    /**
+     * Replace one scheduled session with exactly what the export had for that week.
+     *
+     * @param  array{title: string, rows: array<int, array<string, mixed>>}  $day
+     */
+    protected function overrideSession(Import $import, Program $program, int $week, int $index, ?ProgramDay $blueprintDay, array $day): void
+    {
+        $session = $blueprintDay
+            ? Workout::query()->where('program_day_id', $blueprintDay->id)->where('week', $week)->first()
+            : null;
+
+        $session ??= Workout::create([
             'coach_id' => $program->coach_id,
             'client_id' => $program->client_id,
             'program_id' => $program->id,
             'week' => $week,
             'day' => $index + 1,
+            'scheduled_on' => $program->dateFor($week, ProgramScheduler::DEFAULT_WEEKDAYS[7][min($index, 6)]),
             'title' => $day['title'],
-            'scheduled_on' => $date,
         ]);
 
-        foreach ($day['rows'] as $position => $row) {
-            $exerciseId = $import->matches[$row['raw']]['exercise_id'] ?? null;
+        $session->forceFill(['title' => $day['title'], 'customized_at' => now()])->save();
+        $session->items()->delete();
 
-            if (! $exerciseId) {
-                continue;
-            }
+        $links = $blueprintDay?->exercises()->pluck('id', 'exercise_id') ?? collect();
 
-            $workout->items()->create([
-                'exercise_id' => $exerciseId,
-                'position' => $position,
+        foreach ($this->importedRows($import, $day) as $position => $row) {
+            $session->items()->create($row + ['position' => $position, 'program_exercise_id' => $links->get($row['exercise_id'])]);
+        }
+    }
+
+    /**
+     * Rows of an imported day whose exercise name was matched, as prescriptions.
+     *
+     * @param  array{rows: array<int, array<string, mixed>>}  $day
+     * @return array<int, array<string, mixed>>
+     */
+    protected function importedRows(Import $import, array $day): array
+    {
+        return collect($day['rows'])
+            ->map(fn ($row) => [
+                'exercise_id' => $import->matches[$row['raw']]['exercise_id'] ?? null,
                 'sets' => $row['sets'],
                 'reps' => $row['reps'],
                 'load' => $row['load'],
                 'target_rpe' => $row['rpe'],
                 'progression' => filled($row['load']) && $row['load'] !== 'BW' ? 'load' : 'none',
-            ]);
-        }
+            ])
+            ->filter(fn ($row) => $row['exercise_id'] !== null)
+            ->values()
+            ->all();
     }
 }

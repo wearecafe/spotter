@@ -40,6 +40,11 @@ return [
         'email' => env('SUPPORT_EMAIL'),
     ],
 
+    // Photos for exercises from free-exercise-db. Defaults to GitHub at the pinned commit of our copy.
+    'exercise_images' => [
+        'base_url' => env('EXERCISE_IMAGE_BASE_URL') ?: 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises',
+    ],
+
     // Claude powers the Coach Inbox drafts and reads imported program PDFs.
     // Without a key, Spotter falls back to rule-based drafts and text-only imports.
     'anthropic' => [

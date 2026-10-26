@@ -7,11 +7,10 @@ use App\Models\CheckIn;
 use App\Models\Exercise;
 use App\Models\Message;
 use App\Models\NutritionLog;
-use App\Models\Program;
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\InboxFeed;
-use App\Services\Progression;
+use App\Services\ProgramScheduler;
 use App\Services\TeamManager;
 use Illuminate\Database\Seeder;
 
@@ -54,32 +53,45 @@ class DemoSeeder extends Seeder
 
         $ex = fn (string $name) => Exercise::whereNull('coach_id')->where('name', $name)->value('id');
 
-        // Maya: a program with week 1 logged and an upcoming week 2.
-        $program = Program::create(['coach_id' => $coach->id, 'client_id' => $maya->id, 'title' => 'Strength block', 'starts_on' => today()->startOfWeek()->subWeek(), 'planned_weeks' => 6]);
-        app(Progression::class)->start($program, 2);
-        [$lower, $upper] = $program->workouts()->get()->all();
-        $lower->update(['title' => 'Lower A', 'completed_at' => now()->subDays(5), 'client_feedback' => 'Squats felt strong. Left knee a bit sore on the split squats.']);
-        $upper->update(['title' => 'Upper A', 'completed_at' => now()->subDays(3)]);
+        // Maya: a 6-week program, Lower A on Tuesdays and Upper A on Thursdays. Week 1 is logged.
+        $scheduler = app(ProgramScheduler::class);
+        $program = $scheduler->create($maya, 'Strength block', today()->startOfWeek()->subWeek(), 6, 2);
+        [$lowerDay, $upperDay] = $program->days()->get()->all();
+        $lowerDay->update(['title' => 'Lower A', 'weekday' => 2, 'notes' => 'Warm up with 5 minutes on the bike, then two light squat sets.']);
+        $upperDay->update(['title' => 'Upper A', 'weekday' => 4]);
 
         $rows = [
-            [$lower, 'Back Squat', 4, '5', '75 kg', '8', 'load', array_fill(0, 4, ['reps' => '5', 'load' => '75 kg', 'rpe' => '7.5', 'done' => true])],
-            [$lower, 'Romanian Deadlift', 3, '8', '60 kg', '8', 'load', [['reps' => '8', 'load' => '60 kg', 'rpe' => '8', 'done' => true], ['reps' => '8', 'load' => '60 kg', 'rpe' => '9', 'done' => true], ['reps' => '6', 'load' => '60 kg', 'rpe' => '9.5', 'done' => true]]],
-            [$lower, 'Bulgarian Split Squat', 3, '8-10', '2 × 16 kg', null, 'reps', array_fill(0, 3, ['reps' => '10', 'load' => '2 × 16 kg', 'rpe' => null, 'done' => true])],
-            [$upper, 'Overhead Press', 4, '6', '37.5 kg', '8', 'load', array_fill(0, 4, ['reps' => '6', 'load' => '37.5 kg', 'rpe' => '8', 'done' => true])],
-            [$upper, 'Lat Pulldown', 3, '10-12', '45 kg', null, 'reps', array_fill(0, 3, ['reps' => '12', 'load' => '45 kg', 'rpe' => null, 'done' => true])],
-            [$upper, 'Plank', 3, '40s', null, null, 'hold', null],
+            [$lowerDay, 'Back Squat', 4, '5', '75 kg', '8', 'load', array_fill(0, 4, ['reps' => '5', 'load' => '75 kg', 'rpe' => '7.5', 'done' => true])],
+            [$lowerDay, 'Romanian Deadlift', 3, '8', '60 kg', '8', 'load', [['reps' => '8', 'load' => '60 kg', 'rpe' => '8', 'done' => true], ['reps' => '8', 'load' => '60 kg', 'rpe' => '9', 'done' => true], ['reps' => '6', 'load' => '60 kg', 'rpe' => '9.5', 'done' => true]]],
+            [$lowerDay, 'Bulgarian Split Squat', 3, '8-10', '2 × 16 kg', null, 'reps', array_fill(0, 3, ['reps' => '10', 'load' => '2 × 16 kg', 'rpe' => null, 'done' => true])],
+            [$upperDay, 'Overhead Press', 4, '6', '37.5 kg', '8', 'load', array_fill(0, 4, ['reps' => '6', 'load' => '37.5 kg', 'rpe' => '8', 'done' => true])],
+            [$upperDay, 'Lat Pulldown', 3, '10-12', '45 kg', null, 'reps', array_fill(0, 3, ['reps' => '12', 'load' => '45 kg', 'rpe' => null, 'done' => true])],
+            [$upperDay, 'Plank', 3, '40s', null, null, 'hold', null],
         ];
 
-        foreach ($rows as $i => [$workout, $name, $sets, $reps, $load, $rpe, $rule, $logged]) {
-            $workout->items()->create(['exercise_id' => $ex($name), 'position' => $i, 'sets' => $sets, 'reps' => $reps, 'load' => $load, 'target_rpe' => $rpe, 'rest_seconds' => 120, 'progression' => $rule, 'logged_sets' => $logged]);
+        $logs = [];
+        foreach ($rows as $i => [$day, $name, $sets, $reps, $load, $rpe, $rule, $logged]) {
+            $row = $day->exercises()->create(['exercise_id' => $ex($name), 'position' => $i, 'sets' => $sets, 'reps' => $reps, 'load' => $load, 'target_rpe' => $rpe, 'rest_seconds' => 120, 'progression' => $rule]);
+            $logs[$row->id] = $logged;
         }
+
+        $scheduler->sync($program->fresh());
+
+        // Week 1 happened: Maya logged everything and finished both sessions.
+        $lower = Workout::where('program_day_id', $lowerDay->id)->where('week', 1)->sole();
+        $upper = Workout::where('program_day_id', $upperDay->id)->where('week', 1)->sole();
+        foreach ([$lower, $upper] as $session) {
+            foreach ($session->items as $item) {
+                $item->update(['logged_sets' => $logs[$item->program_exercise_id] ?? null]);
+            }
+        }
+        $lower->update(['completed_at' => $lower->scheduled_on->setTime(18, 30), 'client_feedback' => 'Squats felt strong. Left knee a bit sore on the split squats.']);
+        $upper->update(['completed_at' => $upper->scheduled_on->setTime(18, 30)]);
+        $scheduler->sync($program->fresh());
 
         // An older squat session, so this week's squat counts as a personal record.
         $older = Workout::create(['coach_id' => $coach->id, 'client_id' => $maya->id, 'title' => 'Assessment', 'scheduled_on' => today()->subWeeks(3), 'completed_at' => now()->subWeeks(3)]);
         $older->items()->create(['exercise_id' => $ex('Back Squat'), 'sets' => 3, 'reps' => '5', 'logged_sets' => array_fill(0, 3, ['reps' => '5', 'load' => '70 kg', 'done' => true])]);
-
-        app(Progression::class)->generateNextWeek($program);
-        $program->workouts()->where('week', 2)->get()->each(fn ($w, $i) => $w->update(['scheduled_on' => today()->addDays($i * 2 + 1)]));
 
         $feed = app(InboxFeed::class);
         $feed->workoutCompleted($lower->fresh());

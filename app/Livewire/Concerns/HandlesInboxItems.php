@@ -6,6 +6,7 @@ use App\Jobs\DraftInboxItem;
 use App\Models\InboxItem;
 use App\Models\Message;
 use App\Models\WorkoutExercise;
+use App\Services\ProgramScheduler;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -122,6 +123,9 @@ trait HandlesInboxItems
             $suggestion['field'] => $suggestion['field'] === 'sets' ? (int) $suggestion['to'] : $suggestion['to'],
             'change_reason' => $suggestion['reason'] ?: null,
         ]);
+
+        // A one-off change to this session: program edits shouldn't undo it.
+        app(ProgramScheduler::class)->customize($target->workout);
 
         $item->update(['suggestion' => array_merge($suggestion, ['applied' => true])]);
         Flux::toast(variant: 'success', text: __('Updated :exercise.', ['exercise' => $suggestion['exercise'] ?? __('the workout')]));

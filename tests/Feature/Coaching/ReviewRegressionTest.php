@@ -5,7 +5,6 @@ namespace Tests\Feature\Coaching;
 use App\Models\Exercise;
 use App\Models\InboxItem;
 use App\Models\Message;
-use App\Models\Program;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutExercise;
@@ -93,10 +92,18 @@ class ReviewRegressionTest extends TestCase
         app(ProgramImporter::class)->addPrograms($import, [['name' => 'Maya Chen.txt', 'contents' => $text]]);
         app(ProgramImporter::class)->finish($import->fresh());
 
-        $workouts = $client->programs()->sole()->workouts()->get();
-        $this->assertSame([[1, 1], [1, 2], [2, 1]], $workouts->map(fn ($w) => [$w->week, $w->day])->all());
-        $this->assertTrue($workouts[2]->scheduled_on->isSameDay($workouts[0]->scheduled_on->addWeek()));
-        $this->assertFalse($workouts[0]->scheduled_on->isSameDay($workouts[1]->scheduled_on));
+        $program = $client->programs()->sole();
+        $sessions = $program->workouts()->with('items')->get();
+        $at = fn (int $week, int $day) => $sessions->first(fn ($w) => $w->week === $week && $w->day === $day);
+
+        // Week 1 is the blueprint, repeated every week; week 2's export overrides that one session exactly.
+        $this->assertSame(6, $sessions->max('week'));
+        $this->assertSame('62.5 kg', $at(2, 1)->items->first()->load);
+        $this->assertNotNull($at(2, 1)->customized_at);
+        $this->assertTrue($at(2, 1)->scheduled_on->isSameDay($at(1, 1)->scheduled_on->addWeek()));
+        $this->assertFalse($at(1, 1)->scheduled_on->isSameDay($at(1, 2)->scheduled_on));
+        $this->assertNull($at(2, 2), 'The export had no day 2 in week 2, so that session is skipped.');
+        $this->assertSame('52.5 kg', $at(3, 2)->items->first()->load, 'Week 3 day 2 is one step on from week 1 (the skipped week adds nothing).');
     }
 
     public function test_lifting_less_than_prescribed_holds_the_load(): void
@@ -114,21 +121,6 @@ class ReviewRegressionTest extends TestCase
     {
         $this->assertSame('140 lb', Load::add('135 lb', '2.5 kg'));
         $this->assertSame('102.5 kg', Load::add('100 kg', '5 lb'));
-    }
-
-    public function test_out_of_range_weeks_are_clamped(): void
-    {
-        $coach = User::factory()->create();
-        $client = User::factory()->clientOf($coach)->create();
-        $program = Program::create(['coach_id' => $coach->id, 'client_id' => $client->id, 'title' => 'Block', 'starts_on' => today(), 'planned_weeks' => 4]);
-        app(Progression::class)->start($program, 2);
-
-        Livewire::actingAs($coach)->test('pages::coach.program', ['program' => $program])
-            ->set('week', 300)
-            ->assertSet('week', 1)
-            ->call('addDay');
-
-        $this->assertSame([1], $program->workouts()->pluck('week')->unique()->values()->all());
     }
 
     public function test_tone_samples_never_come_from_other_clients(): void
