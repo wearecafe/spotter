@@ -5,6 +5,7 @@ use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -12,6 +13,9 @@ new #[Layout('layouts::invite')] #[Title('Join your coach')] class extends Compo
     use PasswordValidationRules;
 
     public User $client;
+
+    #[Locked]
+    public string $token = '';
 
     public string $lang = 'en';
 
@@ -23,15 +27,25 @@ new #[Layout('layouts::invite')] #[Title('Join your coach')] class extends Compo
 
     public function mount(string $token): void
     {
-        $this->client = User::query()
-            ->where('role', Role::Client)
-            ->where('invitation_token', $token)
-            ->whereNull('invitation_accepted_at')
-            ->with('coach')
-            ->firstOrFail();
+        $this->token = $token;
+        $this->client = $this->pendingClient();
 
         $this->lang = session('locale', $this->client->locale ?: 'en');
         app()->setLocale($this->lang);
+    }
+
+    /**
+     * The client this token still belongs to. Fails once the invitation is used,
+     * so an old copy of the page can't be replayed to reset the password.
+     */
+    protected function pendingClient(): User
+    {
+        return User::query()
+            ->where('role', Role::Client)
+            ->where('invitation_token', $this->token)
+            ->whereNull('invitation_accepted_at')
+            ->with('coach')
+            ->firstOrFail();
     }
 
     public function hydrate(): void
@@ -45,7 +59,7 @@ new #[Layout('layouts::invite')] #[Title('Join your coach')] class extends Compo
 
         $this->lang = $lang;
         session(['locale' => $lang]);
-        $this->client->update(['locale' => $lang]);
+        $this->pendingClient()->update(['locale' => $lang]);
         app()->setLocale($lang);
     }
 
@@ -62,6 +76,8 @@ new #[Layout('layouts::invite')] #[Title('Join your coach')] class extends Compo
     public function accept(): void
     {
         $this->validate(['password' => $this->passwordRules()]);
+
+        $this->client = $this->pendingClient();
 
         $this->client->forceFill([
             'password' => $this->password,

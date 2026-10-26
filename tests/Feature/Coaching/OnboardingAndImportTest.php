@@ -157,8 +157,8 @@ class OnboardingAndImportTest extends TestCase
             ->call('sendInvites')
             ->assertRedirect(route('coach.dashboard'));
 
-        Mail::assertSent(ClientInvitation::class, fn ($mail) => $mail->hasTo($luc->email));
-        Mail::assertNotSent(ClientInvitation::class, fn ($mail) => $mail->hasTo($maya->email));
+        Mail::assertQueued(ClientInvitation::class, fn ($mail) => $mail->hasTo($luc->email));
+        Mail::assertNotQueued(ClientInvitation::class, fn ($mail) => $mail->hasTo($maya->email));
         $this->assertNotNull($luc->fresh()->invited_at);
         $this->assertNotNull($this->coach->fresh()->onboarded_at);
 

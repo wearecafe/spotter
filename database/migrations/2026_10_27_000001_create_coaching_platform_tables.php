@@ -38,6 +38,8 @@ return new class extends Migration
             $table->foreignId('program_id')->nullable()->after('template_id')->constrained()->cascadeOnDelete();
             $table->unsignedTinyInteger('week')->nullable()->after('program_id');
             $table->unsignedTinyInteger('day')->nullable()->after('week');
+            // Set the first time a completed workout is reported to the Coach Inbox.
+            $table->timestamp('reported_at')->nullable()->after('client_feedback');
             $table->index(['program_id', 'week', 'day']);
         });
 
@@ -136,7 +138,7 @@ return new class extends Migration
         Schema::table('workouts', function (Blueprint $table) {
             $table->dropIndex(['program_id', 'week', 'day']);
             $table->dropConstrainedForeignId('program_id');
-            $table->dropColumn(['week', 'day']);
+            $table->dropColumn(['week', 'day', 'reported_at']);
         });
 
         Schema::dropIfExists('programs');

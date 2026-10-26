@@ -29,7 +29,7 @@ new #[Title('Messages')] class extends Component {
     #[Computed]
     public function messages()
     {
-        return Message::query()->thread($this->client)->oldest()->limit(200)->get();
+        return Message::query()->thread($this->client)->latest()->latest('id')->limit(200)->get()->reverse()->values();
     }
 
     public function send(): void

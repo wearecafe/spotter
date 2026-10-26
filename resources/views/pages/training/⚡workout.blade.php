@@ -75,12 +75,8 @@ new #[Title('Workout')] class extends Component {
     {
         $this->saveProgress(notify: false);
 
-        $firstTime = ! $this->workout->isCompleted();
         $this->workout->update(['completed_at' => now()]);
-
-        if ($firstTime) {
-            $feed->workoutCompleted($this->workout->fresh());
-        }
+        $feed->workoutCompleted($this->workout->fresh());
 
         Flux::toast(variant: 'success', heading: __('Workout complete!'), text: __('Nice work. Your coach can see your results.'));
     }

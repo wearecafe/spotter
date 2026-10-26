@@ -36,6 +36,12 @@ class InboxFeed
      */
     public function workoutCompleted(Workout $workout): void
     {
+        // Reopening and completing again must not raise the same items twice.
+        if ($workout->reported_at !== null) {
+            return;
+        }
+
+        $workout->update(['reported_at' => now()]);
         $client = $workout->client;
 
         if (filled($workout->client_feedback)) {

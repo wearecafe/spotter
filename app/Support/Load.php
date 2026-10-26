@@ -77,7 +77,15 @@ class Load
             $new = $value * (1 + (float) str_replace(',', '.', $m[1]) / 100);
             $new = round($new / ($unit === 'lb' ? 5 : 2.5)) * ($unit === 'lb' ? 5 : 2.5);
         } else {
-            $new = $value + (self::parse($step)['value'] ?? 0) * (str_starts_with($step, '-') ? -1 : 1);
+            ['value' => $stepValue, 'unit' => $stepUnit] = self::parse($step);
+            $stepValue = ($stepValue ?? 0) * (str_starts_with($step, '-') ? -1 : 1);
+
+            // A "2.5 kg" step on a load in pounds (or the reverse) is converted, then rounded to a usable plate jump.
+            if ($stepUnit !== null && $unit !== null && $stepUnit !== $unit) {
+                $stepValue = $unit === 'lb' ? round($stepValue / 0.45359237 / 2.5) * 2.5 : round($stepValue * 0.45359237 / 1.25) * 1.25;
+            }
+
+            $new = $value + $stepValue;
         }
 
         $formatted = rtrim(rtrim(number_format(max($new, 0), 2, '.', ''), '0'), '.');

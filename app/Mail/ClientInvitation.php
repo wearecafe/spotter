@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use App\Models\User;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -12,7 +13,7 @@ use Illuminate\Queue\SerializesModels;
 /**
  * Invites a client to join their coach on Spotter. Sent in the client's language.
  */
-class ClientInvitation extends Mailable
+class ClientInvitation extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 

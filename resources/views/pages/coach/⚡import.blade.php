@@ -65,7 +65,7 @@ new #[Title('Import review')] class extends Component {
 
     protected function updateMatch(string $raw, array $changes): void
     {
-        abort_if($this->import->status === 'finished', 403);
+        abort_if($this->import->status !== 'review', 403);
 
         $matches = $this->import->matches ?? [];
         abort_unless(isset($matches[$raw]), 404);
@@ -86,6 +86,8 @@ new #[Title('Import review')] class extends Component {
 
     public function acceptAll(): void
     {
+        abort_if($this->import->status !== 'review', 403);
+
         $matches = collect($this->import->matches ?? [])
             ->map(fn ($m) => $m['exercise_id'] ? array_merge($m, ['resolved' => true]) : $m)
             ->all();
@@ -123,24 +125,38 @@ new #[Title('Import review')] class extends Component {
 
     public function createCustom(string $raw): void
     {
+        abort_if($this->import->status !== 'review', 403);
+        abort_unless(isset($this->import->matches[$raw]), 404);
+
         $exercise = Auth::user()->exercises()->create(['name' => Str::of($raw)->squish()->ucfirst()->limit(120, '')->toString()]);
 
         $this->updateMatch($raw, ['exercise_id' => $exercise->id, 'suggestion' => $exercise->name, 'resolved' => true]);
         unset($this->exercises);
     }
 
-    public function addFiles(ProgramImporter $importer): void
+    public function addFiles(): void
     {
+        abort_if($this->import->status === 'finished', 403);
         $this->validate(['moreFiles' => ['required', 'array', 'max:200'], 'moreFiles.*' => ['file', 'mimes:pdf,txt,csv', 'max:10240']]);
 
-        $importer->addPrograms($this->import, $this->moreFiles);
+        \App\Jobs\ProcessImportFiles::start($this->import, $this->moreFiles);
         $this->moreFiles = [];
+        $this->import->refresh();
+        unset($this->stats, $this->spotCheck);
+    }
+
+    public function refreshImport(): void
+    {
         $this->import->refresh();
         unset($this->stats, $this->spotCheck);
     }
 
     public function finish(ProgramImporter $importer): void
     {
+        if ($this->import->status !== 'review') {
+            return;
+        }
+
         if ($this->import->unresolvedCount() > 0) {
             Flux::toast(variant: 'warning', text: __('Confirm the remaining exercise names first.'));
 
@@ -154,7 +170,14 @@ new #[Title('Import review')] class extends Component {
     }
 }; ?>
 
-<div class="flex flex-col gap-6">
+<div class="flex flex-col gap-6" @if ($import->status === 'processing') wire:poll.3s="refreshImport" @endif>
+    @if ($import->status === 'processing')
+        <flux:callout icon="arrow-path">
+            <flux:callout.heading>{{ __('Reading your program files…') }}</flux:callout.heading>
+            <flux:callout.text>{{ __('PDFs take a few seconds each. This page updates on its own.') }}</flux:callout.text>
+        </flux:callout>
+    @endif
+
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
             <flux:text>{{ __('Importing from :source', ['source' => __($import->sourceLabel())]) }}</flux:text>
@@ -171,7 +194,7 @@ new #[Title('Import review')] class extends Component {
         @if ($import->status === 'finished')
             <flux:button :href="route('coach.setup', ['step' => 3])" wire:navigate>{{ __('Continue setup') }}</flux:button>
         @else
-            <flux:button variant="primary" wire:click="finish" :disabled="$import->unresolvedCount() > 0" data-test="finish-import">{{ __('Finish import') }}</flux:button>
+            <flux:button variant="primary" wire:click="finish" :disabled="$import->unresolvedCount() > 0 || $import->status !== 'review'" data-test="finish-import">{{ __('Finish import') }}</flux:button>
         @endif
     </div>
 

@@ -190,7 +190,7 @@ new #[Title('Set up Spotter')] class extends Component {
         ]);
 
         if ($this->programFiles !== []) {
-            $importer->addPrograms($import, $this->programFiles);
+            \App\Jobs\ProcessImportFiles::start($import, $this->programFiles);
         }
 
         $this->reset('clientsFile', 'programFiles');
@@ -216,7 +216,7 @@ new #[Title('Set up Spotter')] class extends Component {
         $data = ['brand_color' => strtoupper($this->brandColor), 'subdomain' => $this->subdomain];
 
         if ($this->logo) {
-            $data['logo_path'] = $this->logo->storePublicly('logos', 'public');
+            $data['logo_path'] = $this->logo->store('logos', config('filesystems.media_disk'));
         }
 
         $this->coach->update($data);

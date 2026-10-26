@@ -35,7 +35,18 @@ new #[Title('Program')] class extends Component {
         Gate::authorize('manage-program', $program);
 
         $this->program = $program->load('client');
-        $this->week = min(max($this->week, 1), max($program->lastWeek(), 1));
+        $this->clampWeek();
+        $this->loadRows();
+    }
+
+    protected function clampWeek(): void
+    {
+        $this->week = min(max($this->week, 1), max($this->program->lastWeek(), 1));
+    }
+
+    public function updatedWeek(): void
+    {
+        $this->clampWeek();
         $this->loadRows();
     }
 
@@ -66,6 +77,7 @@ new #[Title('Program')] class extends Component {
     public function selectWeek(int $week): void
     {
         $this->week = $week;
+        $this->clampWeek();
         $this->historyFor = null;
         $this->loadRows();
     }
@@ -147,6 +159,7 @@ new #[Title('Program')] class extends Component {
 
     public function addDay(): void
     {
+        $this->clampWeek();
         $day = (int) $this->program->workouts()->where('week', $this->week)->max('day') + 1;
         $previous = $this->program->workouts()->where('week', $this->week)->orderByDesc('day')->first();
 

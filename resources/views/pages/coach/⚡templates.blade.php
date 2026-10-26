@@ -33,7 +33,7 @@ new #[Title('Workout templates')] class extends Component {
         $template = Workout::findOrFail($id);
         Gate::authorize('update', $template);
 
-        $copy = $template->replicate()->unsetRelations();
+        $copy = $template->replicate(['reported_at'])->unsetRelations();
         $copy->title = $template->title.' (copy)';
         $copy->save();
 

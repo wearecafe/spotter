@@ -26,8 +26,9 @@ use Illuminate\Support\Facades\DB;
  * @property int|null $program_id
  * @property int|null $week
  * @property int|null $day
+ * @property CarbonInterface|null $reported_at
  */
-#[Fillable(['coach_id', 'client_id', 'template_id', 'title', 'instructions', 'scheduled_on', 'completed_at', 'client_feedback', 'program_id', 'week', 'day'])]
+#[Fillable(['coach_id', 'client_id', 'template_id', 'title', 'instructions', 'scheduled_on', 'completed_at', 'client_feedback', 'program_id', 'week', 'day', 'reported_at'])]
 class Workout extends Model
 {
     /** @use HasFactory<WorkoutFactory> */
@@ -38,6 +39,7 @@ class Workout extends Model
         return [
             'scheduled_on' => 'date',
             'completed_at' => 'datetime',
+            'reported_at' => 'datetime',
         ];
     }
 
@@ -112,7 +114,7 @@ class Workout extends Model
     public function assignTo(User $client, DateTimeInterface|string $date): Workout
     {
         return DB::transaction(function () use ($client, $date) {
-            $copy = $this->replicate(['client_id', 'scheduled_on', 'completed_at', 'client_feedback', 'template_id', 'program_id', 'week', 'day'])->unsetRelations();
+            $copy = $this->replicate(['client_id', 'scheduled_on', 'completed_at', 'client_feedback', 'reported_at', 'template_id', 'program_id', 'week', 'day'])->unsetRelations();
             $copy->client_id = $client->id;
             $copy->scheduled_on = $date;
             $copy->template_id = $this->isTemplate() ? $this->id : $this->template_id;

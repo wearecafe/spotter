@@ -23,7 +23,7 @@ class Progression
             $lastWeek = $program->workouts()->where('week', $last)->with('items')->get();
 
             foreach ($lastWeek as $workout) {
-                $copy = $workout->replicate(['scheduled_on', 'completed_at', 'client_feedback', 'week'])->unsetRelations();
+                $copy = $workout->replicate(['scheduled_on', 'completed_at', 'client_feedback', 'reported_at', 'week'])->unsetRelations();
                 $copy->week = $next;
                 $copy->scheduled_on = $workout->scheduled_on?->addWeek();
                 $copy->save();
@@ -83,7 +83,8 @@ class Progression
     }
 
     /**
-     * Did the client earn progression? Every set done, reps at least the target, RPE no higher than target.
+     * Did the client earn progression? Every set done, reps and load at least the target, RPE no higher than target.
+     * Blank reps or load on a completed set count as "as prescribed", since that's what the logger shows as the placeholder.
      *
      * @return array{0: bool, 1: string}
      */
@@ -102,6 +103,12 @@ class Progression
         $minReps = Load::low($item->reps);
         if ($minReps !== null && $sets->contains(fn ($s) => filled($s['reps'] ?? null) && (float) $s['reps'] < $minReps)) {
             return [false, __('reps came in under target')];
+        }
+
+        // A blank logged load means the client used the prescribed one (it's the placeholder in the logger).
+        $prescribedKg = Load::toKg($item->load);
+        if ($prescribedKg !== null && $sets->contains(fn ($s) => filled($s['load'] ?? null) && ($kg = Load::toKg($s['load'])) !== null && $kg < $prescribedKg - 0.01)) {
+            return [false, __('load came in under target')];
         }
 
         $maxRpe = Load::high($item->target_rpe);

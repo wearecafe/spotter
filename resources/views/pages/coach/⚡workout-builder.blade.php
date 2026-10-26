@@ -148,7 +148,7 @@ new #[Title('Workout builder')] class extends Component {
     {
         $this->save(notify: false);
 
-        $template = $this->workout->replicate(['client_id', 'scheduled_on', 'completed_at', 'client_feedback', 'template_id', 'program_id', 'week', 'day'])->unsetRelations();
+        $template = $this->workout->replicate(['client_id', 'scheduled_on', 'completed_at', 'client_feedback', 'reported_at', 'template_id', 'program_id', 'week', 'day'])->unsetRelations();
         $template->client_id = null;
         $template->save();
 

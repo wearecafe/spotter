@@ -8,7 +8,7 @@ use App\Models\Import;
 use App\Models\Program;
 use App\Models\User;
 use App\Models\Workout;
-use Illuminate\Http\UploadedFile;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -125,19 +125,15 @@ class ProgramImporter
     }
 
     /**
-     * Text of an uploaded program: plain text as-is, PDFs read by Claude when configured.
+     * Text of a program file: plain text as-is, PDFs read by Claude when configured.
      */
-    public function programText(UploadedFile $file): ?string
+    public function programText(string $contents, string $filename): ?string
     {
-        $extension = Str::lower($file->getClientOriginalExtension());
-
-        if ($extension === 'pdf' || $file->getMimeType() === 'application/pdf') {
-            return $this->assistant->extractProgramText($file->get());
+        if (Str::lower(pathinfo($filename, PATHINFO_EXTENSION)) === 'pdf' || str_starts_with($contents, '%PDF')) {
+            return $this->assistant->extractProgramText($contents);
         }
 
-        $text = $file->get();
-
-        return is_string($text) && mb_check_encoding($text, 'UTF-8') ? $text : null;
+        return mb_check_encoding($contents, 'UTF-8') ? $contents : null;
     }
 
     /**
@@ -145,12 +141,13 @@ class ProgramImporter
      *
      * Handles lines like "Back Squat 4x5 75kg rpe 7-8", "BSS 3 x 8 16kg DBs", "Plank 3x30s".
      *
-     * @return array<int, array{title: string, rows: array<int, array{raw: string, sets: int, reps: string|null, load: string|null, rpe: string|null}>}>
+     * @return array<int, array{title: string, week: int, rows: array<int, array{raw: string, sets: int, reps: string|null, load: string|null, rpe: string|null}>}>
      */
     public function parseProgram(string $text): array
     {
         $days = [];
         $current = null;
+        $week = 1;
 
         foreach (preg_split('/\r\n|\r|\n/', $text) ?: [] as $line) {
             $line = trim(preg_replace('/\s+/u', ' ', $line) ?? '');
@@ -159,8 +156,19 @@ class ProgramImporter
                 continue;
             }
 
+            // "Week 2" or "Week 2 - Day 1 Lower" (programs exported across several weeks).
+            if (preg_match('/^(?:week|wk|semaine)\s*(\d{1,2})\b\s*[-:–,]?\s*(.*)$/iu', $line, $w)) {
+                $week = max(1, min((int) $w[1], 52));
+                $current = null;
+                $line = trim($w[2]);
+
+                if ($line === '') {
+                    continue;
+                }
+            }
+
             if (preg_match('/^(day|jour|session|workout|séance|seance)\b/iu', $line)) {
-                $days[] = ['title' => Str::limit($line, 80, ''), 'rows' => []];
+                $days[] = ['title' => Str::limit($line, 80, ''), 'week' => $week, 'rows' => []];
                 $current = array_key_last($days);
 
                 continue;
@@ -175,7 +183,7 @@ class ProgramImporter
             }
 
             if ($current === null) {
-                $days[] = ['title' => 'Day A', 'rows' => []];
+                $days[] = ['title' => 'Day A', 'week' => $week, 'rows' => []];
                 $current = array_key_last($days);
             }
 
@@ -260,9 +268,9 @@ class ProgramImporter
     }
 
     /**
-     * Read uploaded program files, one per client (named after the client), into the import.
+     * Read program files (one per client, named after the client) into the import.
      *
-     * @param  array<int, UploadedFile>  $files
+     * @param  array<int, array{name: string, contents: string}>  $files
      */
     public function addPrograms(Import $import, array $files): void
     {
@@ -271,16 +279,16 @@ class ProgramImporter
         $programs = $import->programs ?? [];
 
         foreach ($files as $file) {
-            $base = Str::of($file->getClientOriginalName())->beforeLast('.')->replace(['_', '-'], ' ')->squish()->lower()->toString();
-            $client = $clients->first(fn (User $c) => Str::lower($c->name) === $base || Str::lower($c->email) === $base || Str::contains($base, Str::lower($c->name)));
+            $client = $this->clientForFile($file['name'], $clients);
 
             if (! $client) {
-                $programs['unmatched:'.$base] = ['client_name' => $file->getClientOriginalName(), 'days' => [], 'unreadable' => true, 'reason' => 'no_client'];
+                $base = Str::of($file['name'])->beforeLast('.')->squish()->lower()->toString();
+                $programs['unmatched:'.$base] = ['client_name' => $file['name'], 'days' => [], 'unreadable' => true, 'reason' => 'no_client'];
 
                 continue;
             }
 
-            $text = $this->programText($file);
+            $text = $this->programText($file['contents'], $file['name']);
             $days = $text ? $this->parseProgram($text) : [];
 
             $programs[$client->email] = $days === []
@@ -291,6 +299,28 @@ class ProgramImporter
         $import->programs = $programs;
         $import->matches = $this->buildMatches($import);
         $import->save();
+    }
+
+    /**
+     * Match a file like "Maya Chen.pdf" or "maya_chen - week 6.txt" to exactly one client.
+     * Whole-word matches only, so "Sam Leeson.txt" never lands on "Sam Lee"; ambiguous files are left for the coach.
+     *
+     * @param  Collection<int, User>  $clients
+     */
+    public function clientForFile(string $filename, Collection $clients): ?User
+    {
+        $base = Str::of($filename)->beforeLast('.')->replace(['_', '.'], ' ')->squish()->lower()->toString();
+
+        $exact = $clients->first(fn (User $c) => Str::lower($c->name) === $base || Str::lower($c->email) === $base);
+
+        if ($exact) {
+            return $exact;
+        }
+
+        $candidates = $clients->filter(fn (User $c) => str_contains(Str::lower($c->name), ' ')
+            && preg_match('/(^|[^\pL])'.preg_quote(Str::lower($c->name), '/').'($|[^\pL])/u', $base));
+
+        return $candidates->count() === 1 ? $candidates->first() : null;
     }
 
     /**
@@ -331,6 +361,13 @@ class ProgramImporter
     public function finish(Import $import): int
     {
         return DB::transaction(function () use ($import) {
+            // Lock and re-check so a double-click can't build every program twice.
+            $import = Import::query()->lockForUpdate()->findOrFail($import->id);
+
+            if ($import->status === 'finished') {
+                return 0;
+            }
+
             $coach = $import->coach;
             $created = 0;
             $startsOn = today()->startOfWeek()->addWeek();
@@ -342,41 +379,21 @@ class ProgramImporter
                     continue;
                 }
 
+                $weeks = collect($program['days'])->groupBy(fn ($day) => $day['week'] ?? 1)->sortKeys();
+
                 $spotterProgram = Program::create([
                     'coach_id' => $coach->id,
                     'client_id' => $client->id,
                     'title' => __('Imported from :source', ['source' => $import->sourceLabel()]),
                     'starts_on' => $startsOn,
-                    'planned_weeks' => 6,
+                    'planned_weeks' => max(6, (int) $weeks->keys()->max()),
                 ]);
 
-                foreach ($program['days'] as $index => $day) {
-                    $workout = Workout::create([
-                        'coach_id' => $coach->id,
-                        'client_id' => $client->id,
-                        'program_id' => $spotterProgram->id,
-                        'week' => 1,
-                        'day' => $index + 1,
-                        'title' => $day['title'],
-                        'scheduled_on' => $startsOn->addDays($index * intdiv(7, max(count($program['days']), 1))),
-                    ]);
+                foreach ($weeks as $week => $days) {
+                    $gap = max(1, intdiv(7, max($days->count(), 1)));
 
-                    foreach ($day['rows'] as $position => $row) {
-                        $exerciseId = $import->matches[$row['raw']]['exercise_id'] ?? null;
-
-                        if (! $exerciseId) {
-                            continue;
-                        }
-
-                        $workout->items()->create([
-                            'exercise_id' => $exerciseId,
-                            'position' => $position,
-                            'sets' => $row['sets'],
-                            'reps' => $row['reps'],
-                            'load' => $row['load'],
-                            'target_rpe' => $row['rpe'],
-                            'progression' => filled($row['load']) && $row['load'] !== 'BW' ? 'load' : 'none',
-                        ]);
+                    foreach ($days->values() as $index => $day) {
+                        $this->createImportedDay($import, $spotterProgram, (int) $week, $index, $day, $startsOn->addWeeks((int) $week - 1)->addDays(min($index * $gap, 6)));
                     }
                 }
 
@@ -391,5 +408,39 @@ class ProgramImporter
 
             return $created;
         });
+    }
+
+    /**
+     * @param  array{title: string, rows: array<int, array<string, mixed>>}  $day
+     */
+    protected function createImportedDay(Import $import, Program $program, int $week, int $index, array $day, CarbonInterface $date): void
+    {
+        $workout = Workout::create([
+            'coach_id' => $program->coach_id,
+            'client_id' => $program->client_id,
+            'program_id' => $program->id,
+            'week' => $week,
+            'day' => $index + 1,
+            'title' => $day['title'],
+            'scheduled_on' => $date,
+        ]);
+
+        foreach ($day['rows'] as $position => $row) {
+            $exerciseId = $import->matches[$row['raw']]['exercise_id'] ?? null;
+
+            if (! $exerciseId) {
+                continue;
+            }
+
+            $workout->items()->create([
+                'exercise_id' => $exerciseId,
+                'position' => $position,
+                'sets' => $row['sets'],
+                'reps' => $row['reps'],
+                'load' => $row['load'],
+                'target_rpe' => $row['rpe'],
+                'progression' => filled($row['load']) && $row['load'] !== 'BW' ? 'load' : 'none',
+            ]);
+        }
     }
 }
