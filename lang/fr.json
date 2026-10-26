@@ -168,5 +168,10 @@
     "Team": "Équipe",
     "Spotter backoffice": "Back-office Spotter",
     "This account is paused. Please contact your coach or Spotter support.": "Ce compte est en pause. Contacte ton coach ou le soutien Spotter.",
-    "Your daily targets": "Tes cibles quotidiennes"
+    "Your daily targets": "Tes cibles quotidiennes",
+    "How to": "Comment faire",
+    "Watch demo video": "Voir la vidéo de démo",
+    ":name, :position position": ":name, position de :position",
+    "start": "départ",
+    "end": "fin"
 }

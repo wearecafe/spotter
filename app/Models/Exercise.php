@@ -17,17 +17,59 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $equipment
  * @property string|null $instructions
  * @property string|null $video_url
+ * @property string|null $source
+ * @property string|null $source_id
+ * @property string|null $category
+ * @property string|null $level
+ * @property array<int, string>|null $secondary_muscles
+ * @property array<int, string>|null $images
  */
-#[Fillable(['coach_id', 'name', 'muscle_group', 'equipment', 'instructions', 'video_url'])]
+#[Fillable(['coach_id', 'name', 'muscle_group', 'equipment', 'instructions', 'video_url', 'source', 'source_id', 'category', 'level', 'secondary_muscles', 'images'])]
 class Exercise extends Model
 {
     /** @use HasFactory<ExerciseFactory> */
     use HasFactory;
 
     public const MUSCLE_GROUPS = [
-        'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Quads', 'Hamstrings',
-        'Glutes', 'Calves', 'Core', 'Full body', 'Cardio', 'Mobility',
+        'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Forearms', 'Quads', 'Hamstrings',
+        'Glutes', 'Hips', 'Calves', 'Core', 'Neck', 'Full body', 'Cardio', 'Mobility',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'secondary_muscles' => 'array',
+            'images' => 'array',
+        ];
+    }
+
+    /**
+     * Full URLs for the exercise's photos (start and end positions for library exercises).
+     *
+     * @return array<int, string>
+     */
+    public function imageUrls(): array
+    {
+        $base = rtrim((string) config('services.exercise_images.base_url'), '/');
+
+        return collect($this->images ?? [])
+            ->map(fn (string $path) => str_starts_with($path, 'http') ? $path : $base.'/'.ltrim($path, '/'))
+            ->values()
+            ->all();
+    }
+
+    public function hasDemo(): bool
+    {
+        return $this->video_url !== null || ! empty($this->images) || filled($this->instructions);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function instructionSteps(): array
+    {
+        return array_values(array_filter(array_map('trim', preg_split('/\R+/', (string) $this->instructions) ?: [])));
+    }
 
     /**
      * @return BelongsTo<User, $this>

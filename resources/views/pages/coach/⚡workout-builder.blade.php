@@ -67,8 +67,11 @@ new #[Title('Workout builder')] class extends Component {
             ->when($this->exerciseSearch, fn ($q) => $q->where(fn ($q) => $q
                 ->where('name', 'like', "%{$this->exerciseSearch}%")
                 ->orWhere('muscle_group', 'like', "%{$this->exerciseSearch}%")))
+            ->orderByRaw('case when name like ? then 0 else 1 end', [$this->exerciseSearch.'%'])
+            // Your team's exercises, then Spotter's starter list, then the wider open library.
+            ->orderByRaw("case when coach_id is not null then 0 when source = 'free-exercise-db' then 2 else 1 end")
             ->orderBy('name')
-            ->limit(12)
+            ->limit(20)
             ->get();
     }
 
@@ -277,8 +280,15 @@ new #[Title('Workout builder')] class extends Component {
             <div class="flex max-h-96 flex-col divide-y divide-zinc-100 overflow-y-auto dark:divide-zinc-700">
                 @forelse ($this->exerciseResults as $exercise)
                     <button type="button" wire:click="addExercise({{ $exercise->id }})" wire:key="pick-{{ $exercise->id }}" class="flex items-center justify-between gap-3 px-1 py-2 text-start hover:bg-zinc-50 dark:hover:bg-zinc-700/50">
-                        <span class="font-medium text-zinc-900 dark:text-white">{{ $exercise->name }}</span>
-                        <span class="text-sm text-zinc-500">{{ $exercise->muscle_group }}</span>
+                        <span class="flex min-w-0 items-center gap-3">
+                            @if ($thumb = $exercise->imageUrls()[0] ?? null)
+                                <img src="{{ $thumb }}" alt="" loading="lazy" class="size-9 shrink-0 rounded bg-zinc-100 object-cover">
+                            @else
+                                <span class="size-9 shrink-0 rounded bg-zinc-100 dark:bg-zinc-800"></span>
+                            @endif
+                            <span class="truncate font-medium text-zinc-900 dark:text-white">{{ $exercise->name }}</span>
+                        </span>
+                        <span class="shrink-0 text-sm text-zinc-500">{{ collect([$exercise->muscle_group, $exercise->equipment])->filter()->implode(' · ') }}</span>
                     </button>
                 @empty
                     <flux:text class="py-4">{{ __('No matches. You can add custom exercises in your library.') }}</flux:text>

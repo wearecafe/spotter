@@ -173,8 +173,10 @@ new #[Title('Workout')] class extends Component {
                     @endif
                 </div>
                 <div class="flex shrink-0 gap-1">
-                    @if ($item->exercise->video_url)
-                        <flux:button size="sm" variant="ghost" icon="play-circle" :href="$item->exercise->video_url" target="_blank">{{ __('Demo') }}</flux:button>
+                    @if ($item->exercise->hasDemo())
+                        <flux:modal.trigger :name="'how-to-'.$item->id">
+                            <flux:button size="sm" variant="ghost" icon="play-circle">{{ __('How to') }}</flux:button>
+                        </flux:modal.trigger>
                     @endif
                     <flux:modal.trigger :name="'form-check-'.$item->id">
                         <flux:button size="sm" variant="ghost" icon="video-camera">
@@ -208,6 +210,31 @@ new #[Title('Workout')] class extends Component {
                 @endforeach
             </div>
         </flux:card>
+
+        @if ($item->exercise->hasDemo())
+            <flux:modal :name="'how-to-'.$item->id" class="w-full md:w-[34rem]">
+                <div class="flex flex-col gap-4">
+                    <flux:heading size="lg">{{ $item->exercise->name }}</flux:heading>
+                    @if ($item->exercise->imageUrls())
+                        <div class="grid grid-cols-2 gap-2">
+                            @foreach ($item->exercise->imageUrls() as $i => $url)
+                                <img src="{{ $url }}" loading="lazy" alt="{{ __(':name, :position position', ['name' => $item->exercise->name, 'position' => $i === 0 ? __('start') : __('end')]) }}" class="aspect-[4/3] w-full rounded-lg bg-zinc-100 object-cover">
+                            @endforeach
+                        </div>
+                    @endif
+                    @if ($item->exercise->instructionSteps())
+                        <ol class="flex list-decimal flex-col gap-2 ps-5 text-[15px] leading-relaxed text-zinc-700 dark:text-zinc-300">
+                            @foreach ($item->exercise->instructionSteps() as $step)
+                                <li>{{ $step }}</li>
+                            @endforeach
+                        </ol>
+                    @endif
+                    @if ($item->exercise->video_url)
+                        <flux:button icon="play-circle" :href="$item->exercise->video_url" target="_blank">{{ __('Watch demo video') }}</flux:button>
+                    @endif
+                </div>
+            </flux:modal>
+        @endif
 
         <flux:modal :name="'form-check-'.$item->id" class="w-full md:w-[28rem]">
             <form wire:submit="sendFormCheck({{ $item->id }})" class="flex flex-col gap-4">

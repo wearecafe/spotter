@@ -11,6 +11,9 @@ use Illuminate\Database\Seeder;
  */
 class ExerciseLibrarySeeder extends Seeder
 {
+    /** Also load the open free-exercise-db library (turned off in tests for speed). */
+    public static bool $withOpenLibrary = true;
+
     public const EXERCISES = [
         // name, muscle group, equipment
         ['Back Squat', 'Quads', 'Barbell'],
@@ -66,6 +69,10 @@ class ExerciseLibrarySeeder extends Seeder
                 ['coach_id' => null, 'name' => $name],
                 ['muscle_group' => $muscleGroup, 'equipment' => $equipment],
             );
+        }
+
+        if (static::$withOpenLibrary) {
+            $this->call(FreeExerciseDbSeeder::class);
         }
     }
 }
