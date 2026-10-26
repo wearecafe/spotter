@@ -22,12 +22,12 @@ class NutritionImporter
 {
     /** Normalized header names for each field we read. */
     public const COLUMNS = [
-        'date' => ['date', 'day', 'logged on', 'log date', 'food log date', 'entry date'],
-        'calories' => ['calories', 'calories kcal', 'energy kcal', 'energy', 'kcal', 'cals', 'total calories', 'calories consumed'],
-        'protein' => ['protein', 'protein g', 'protein grams', 'total protein'],
-        'carbs' => ['carbs', 'carbs g', 'carbohydrates', 'carbohydrates g', 'carbohydrate', 'carbohydrate g', 'total carbs', 'total carbohydrates'],
-        'fat' => ['fat', 'fat g', 'total fat', 'total fat g', 'fats', 'fats g'],
-        'weight' => ['weight', 'weight kg', 'weight lb', 'weight lbs', 'body weight', 'bodyweight', 'scale weight', 'scale weight kg', 'scale weight lbs', 'body weight kg', 'body weight lbs'],
+        'date' => ['date', 'day', 'logged on', 'log date', 'food log date', 'entry date', 'jour'],
+        'calories' => ['calories', 'calories kcal', 'energy kcal', 'energy', 'kcal', 'cals', 'total calories', 'calories consumed', 'calories kcal consommees'],
+        'protein' => ['protein', 'protein g', 'protein grams', 'total protein', 'proteines', 'proteines g'],
+        'carbs' => ['carbs', 'carbs g', 'carbohydrates', 'carbohydrates g', 'carbohydrate', 'carbohydrate g', 'total carbs', 'total carbohydrates', 'glucides', 'glucides g'],
+        'fat' => ['fat', 'fat g', 'total fat', 'total fat g', 'fats', 'fats g', 'lipides', 'lipides g'],
+        'weight' => ['weight', 'weight kg', 'weight lb', 'weight lbs', 'body weight', 'bodyweight', 'scale weight', 'scale weight kg', 'scale weight lbs', 'body weight kg', 'body weight lbs', 'poids', 'poids kg', 'poids lb', 'poids lbs'],
     ];
 
     public const MAX_DAYS = 800;

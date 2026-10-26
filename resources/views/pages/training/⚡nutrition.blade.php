@@ -149,21 +149,24 @@ new #[Title('Nutrition')] class extends Component {
     </div>
 
     @if ($this->client->hasNutritionTargets())
-        <flux:card class="grid grid-cols-4 gap-2 text-center">
-            @foreach (['calorie_target' => [__('Calories'), 'kcal'], 'protein_target' => [__('Protein'), 'g'], 'carbs_target' => [__('Carbs'), 'g'], 'fat_target' => [__('Fat'), 'g']] as $field => [$label, $unit])
-                <div>
-                    <div class="text-xs font-medium uppercase text-zinc-500">{{ $label }}</div>
-                    <div class="font-display text-xl font-bold tabular-nums">{{ $this->client->{$field} ? number_format($this->client->{$field}) : '—' }}</div>
-                    <div class="text-xs text-zinc-500">{{ __('daily target, :unit', ['unit' => $unit]) }}</div>
-                </div>
-            @endforeach
+        <flux:card class="flex flex-col gap-3">
+            <flux:heading>{{ __('Your daily targets') }}</flux:heading>
+            <div class="grid grid-cols-4 gap-2 text-center">
+                @foreach (['calorie_target' => [__('Calories'), 'kcal'], 'protein_target' => [__('Protein'), 'g'], 'carbs_target' => [__('Carbs'), 'g'], 'fat_target' => [__('Fat'), 'g']] as $field => [$label, $unit])
+                    <div class="min-w-0">
+                        <div class="truncate text-xs font-medium uppercase text-zinc-500">{{ $label }}</div>
+                        <div class="font-display text-xl font-bold tabular-nums">{{ $this->client->{$field} ? number_format($this->client->{$field}) : '—' }}</div>
+                        <div class="text-xs text-zinc-500">{{ $unit }}</div>
+                    </div>
+                @endforeach
+            </div>
         </flux:card>
     @endif
 
     <flux:card>
         <form wire:submit="save" class="flex flex-col gap-4">
-            <div class="flex items-end justify-between gap-3">
-                <flux:heading>{{ __('Log a day') }}</flux:heading>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <flux:heading class="whitespace-nowrap">{{ __('Log a day') }}</flux:heading>
                 <flux:input wire:model.live="date" type="date" size="sm" class="w-44" :max="today()->toDateString()" :aria-label="__('Date')" />
             </div>
             <div class="flex items-end gap-3">
@@ -189,27 +192,27 @@ new #[Title('Nutrition')] class extends Component {
             <flux:text class="px-5 pb-5">{{ __('Nothing logged yet.') }}</flux:text>
         @else
             <div class="overflow-x-auto">
-                <table class="w-full min-w-[30rem] text-sm">
+                <table class="w-full text-sm">
                     <thead><tr class="text-xs uppercase text-zinc-500">
-                        <th class="px-5 py-2 text-start font-medium">{{ __('Day') }}</th>
+                        <th class="px-3 py-2 text-start font-medium sm:px-5">{{ __('Day') }}</th>
                         <th class="px-2 py-2 text-end font-medium">{{ __('Weight') }}</th>
                         <th class="px-2 py-2 text-end font-medium">kcal</th>
                         <th class="px-2 py-2 text-end font-medium">P</th>
                         <th class="px-2 py-2 text-end font-medium">C</th>
-                        <th class="px-5 py-2 text-end font-medium">F</th>
+                        <th class="px-3 py-2 text-end font-medium sm:px-5">F</th>
                     </tr></thead>
                     <tbody>
                         @foreach ($this->recent as $log)
                             <tr class="border-t border-zinc-100 tabular-nums dark:border-zinc-700" wire:key="n-{{ $log->id }}">
-                                <td class="px-5 py-2">
-                                    <button type="button" wire:click="$set('date', '{{ $log->logged_on->toDateString() }}')" class="text-start hover:underline">{{ $log->logged_on->translatedFormat('D j M') }}</button>
-                                    @if ($log->source !== 'manual')<span class="ms-1 text-xs text-zinc-500">· {{ $log->sourceLabel() }}</span>@endif
+                                <td class="px-3 py-2 sm:px-5">
+                                    <button type="button" wire:click="$set('date', '{{ $log->logged_on->toDateString() }}')" class="whitespace-nowrap text-start hover:underline">{{ $log->logged_on->translatedFormat('D j') }}</button>
+                                    @if ($log->source !== 'manual')<span class="block text-[11px] text-zinc-500">{{ $log->sourceLabel() }}</span>@endif
                                 </td>
-                                <td class="px-2 py-2 text-end">{{ $log->weight ? $log->weight.' '.$log->weight_unit : '—' }}</td>
+                                <td class="whitespace-nowrap px-2 py-2 text-end">{{ $log->weight ? $log->weight.' '.$log->weight_unit : '—' }}</td>
                                 <td class="px-2 py-2 text-end">{{ $log->calories !== null ? number_format($log->calories) : '—' }}</td>
                                 <td class="px-2 py-2 text-end">{{ $log->protein ?? '—' }}</td>
                                 <td class="px-2 py-2 text-end">{{ $log->carbs ?? '—' }}</td>
-                                <td class="px-5 py-2 text-end">{{ $log->fat ?? '—' }}</td>
+                                <td class="px-3 py-2 text-end sm:px-5">{{ $log->fat ?? '—' }}</td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -224,12 +227,12 @@ new #[Title('Nutrition')] class extends Component {
             <flux:text size="sm" class="mt-1">{{ __('Export your data from the app, then upload the file here. Days already in Spotter are updated, not duplicated.') }}</flux:text>
         </div>
         <form wire:submit="import" class="flex flex-col gap-4">
-            <flux:radio.group wire:model.live="importSource" variant="segmented" :label="__('App')">
-                <flux:radio value="macrofactor" label="MacroFactor" />
-                <flux:radio value="myfitnesspal" label="MyFitnessPal" />
-                <flux:radio value="loseit" label="Lose It!" />
-                <flux:radio value="csv" :label="__('Other')" />
-            </flux:radio.group>
+            <flux:select wire:model.live="importSource" :label="__('App')">
+                <flux:select.option value="macrofactor">MacroFactor</flux:select.option>
+                <flux:select.option value="myfitnesspal">MyFitnessPal</flux:select.option>
+                <flux:select.option value="loseit">Lose It!</flux:select.option>
+                <flux:select.option value="csv">{{ __('Other') }}</flux:select.option>
+            </flux:select>
             <flux:text size="sm">
                 {{ match ($importSource) {
                     'myfitnesspal' => __('Upload the .zip from MyFitnessPal’s data export, or the Nutrition Summary CSV inside it. MyFitnessPal may require Premium to export.'),
