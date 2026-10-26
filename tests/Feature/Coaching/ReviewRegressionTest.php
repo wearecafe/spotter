@@ -132,7 +132,7 @@ class ReviewRegressionTest extends TestCase
         $other = User::factory()->clientOf($coach)->create();
         Message::create(['coach_id' => $coach->id, 'client_id' => $other->id, 'sender_id' => $coach->id, 'body' => 'PRIVATE-NOTE-FOR-OTHER']);
 
-        Livewire::actingAs($maya)->test('pages::training.messages')->set('body', 'Hi')->call('send');
+        Livewire::actingAs($maya)->test('pages::chat.thread', ['client' => $maya])->set('body', 'Hi')->call('send');
 
         Http::assertSent(fn ($request) => ! str_contains(json_encode($request->data()), 'PRIVATE-NOTE-FOR-OTHER'));
     }

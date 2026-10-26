@@ -173,5 +173,19 @@
     "Watch demo video": "Voir la vidéo de démo",
     ":name, :position position": ":name, position de :position",
     "start": "départ",
-    "end": "fin"
+    "end": "fin",
+    "Yesterday": "Hier",
+    "Load earlier messages": "Afficher les messages précédents",
+    "Photo from :name": "Photo de :name",
+    "Seen": "Vu",
+    "Remove photo": "Retirer la photo",
+    "Add photos": "Ajouter des photos",
+    "Write a message or add a photo.": "Écris un message ou ajoute une photo.",
+    "Send up to :count photos at a time.": "Envoie jusqu’à :count photos à la fois.",
+    "Sent a photo|Sent :count photos": "A envoyé une photo|A envoyé :count photos",
+    "New message from :name|:count new messages from :name": "Nouveau message de :name|:count nouveaux messages de :name",
+    ":sender sent you a message on Spotter.|:sender sent you :count messages on Spotter.": ":sender t’a envoyé un message sur Spotter.|:sender t’a envoyé :count messages sur Spotter.",
+    "Reply": "Répondre",
+    "You’re getting this because the message is still unread after a few minutes.": "Tu reçois ce courriel parce que le message n’a pas été lu après quelques minutes.",
+    "No messages yet.": "Aucun message pour l’instant."
 }

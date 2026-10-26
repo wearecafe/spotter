@@ -14,15 +14,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $client_id
  * @property int $sender_id
  * @property string $body
+ * @property array<int, string>|null $photos storage paths on the media disk
  * @property CarbonInterface|null $read_at
+ * @property CarbonInterface|null $notified_at
  * @property CarbonInterface $created_at
  */
-#[Fillable(['coach_id', 'client_id', 'sender_id', 'body', 'read_at'])]
+#[Fillable(['coach_id', 'client_id', 'sender_id', 'body', 'photos', 'read_at', 'notified_at'])]
 class Message extends Model
 {
     protected function casts(): array
     {
-        return ['read_at' => 'datetime'];
+        return ['photos' => 'array', 'read_at' => 'datetime', 'notified_at' => 'datetime'];
     }
 
     /** @return BelongsTo<User, $this> */
@@ -51,5 +53,25 @@ class Message extends Model
     public function scopeThread(Builder $query, User $client): void
     {
         $query->where('client_id', $client->id);
+    }
+
+    /**
+     * Who should hear about this message: the client, or the client's current coach.
+     */
+    public function recipient(): ?User
+    {
+        return $this->fromClient() ? $this->client?->coach : $this->client;
+    }
+
+    /**
+     * Short preview for lists and emails.
+     */
+    public function preview(int $limit = 80): string
+    {
+        if (trim($this->body) !== '') {
+            return str($this->body)->squish()->limit($limit)->toString();
+        }
+
+        return trans_choice('Sent a photo|Sent :count photos', count($this->photos ?? []));
     }
 }

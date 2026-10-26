@@ -4,8 +4,8 @@ namespace App\Livewire\Concerns;
 
 use App\Jobs\DraftInboxItem;
 use App\Models\InboxItem;
-use App\Models\Message;
 use App\Models\WorkoutExercise;
+use App\Services\Chat;
 use App\Services\ProgramScheduler;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
@@ -65,12 +65,7 @@ trait HandlesInboxItems
             return;
         }
 
-        Message::create([
-            'coach_id' => Auth::id(),
-            'client_id' => $item->client_id,
-            'sender_id' => Auth::id(),
-            'body' => $body,
-        ]);
+        app(Chat::class)->send(Auth::user(), $item->client, $body);
 
         $this->resolve($item);
         Flux::toast(variant: 'success', text: __('Sent to :name.', ['name' => str($item->client->name)->before(' ')]));

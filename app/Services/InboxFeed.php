@@ -12,7 +12,6 @@ use App\Models\Workout;
 use App\Models\WorkoutExercise;
 use App\Support\Load;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 
 /**
  * Turns client activity into Coach Inbox items. Each new item is drafted in the background.
@@ -74,7 +73,7 @@ class InboxFeed
             $existing->update([
                 'subject_type' => $message->getMorphClass(),
                 'subject_id' => $message->id,
-                'headline' => Str::limit($message->body, 80),
+                'headline' => $message->preview(),
                 'status' => 'open',
                 'snoozed_until' => null,
             ]);
@@ -83,7 +82,7 @@ class InboxFeed
             return $existing;
         }
 
-        return $this->add($client, 'message', $message, Str::limit($message->body, 80));
+        return $this->add($client, 'message', $message, $message->preview());
     }
 
     /**
