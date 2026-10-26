@@ -7,9 +7,9 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
     <head>
         @include('partials.head', ['title' => __('Programming that keeps up with your clients')])
-        <meta name="description" content="{{ __('Spotter is coaching software for personal trainers. Build programs that progress from what each client actually lifts, give clients an app to log every set, and handle check-ins, form checks and messages from one inbox. English and French.') }}">
+        <meta name="description" content="{{ __('Spotter is coaching software for personal trainers and gyms. Build a program once and it schedules itself, progressing from what each client actually lifts. Nutrition tracking, an 870+ exercise library with photos, and one inbox for check-ins, form checks and messages. English and French.') }}">
         @php($shareTitle = __('Spotter: programming that keeps up with your clients'))
-        @php($shareText = __('Build programs that progress from what each client actually lifts, and handle every check-in, form check and message from one inbox. For personal trainers, in English and French.'))
+        @php($shareText = __('Build a program once and it schedules itself, progressing from what each client actually lifts. Nutrition, an 870+ exercise library and one inbox for every check-in. For trainers and gyms, in English and French.'))
         <link rel="canonical" href="{{ url('/') }}">
         <meta property="og:type" content="website">
         <meta property="og:site_name" content="Spotter">
@@ -39,8 +39,9 @@
                 </a>
                 <nav aria-label="{{ __('Main') }}" class="hidden items-center gap-7 text-sm font-medium text-zinc-300 md:flex">
                     <a href="#programs" class="hover:text-white">{{ __('Programs') }}</a>
-                    <a href="#clients" class="hover:text-white">{{ __('Client app') }}</a>
+                    <a href="#nutrition" class="hover:text-white">{{ __('Nutrition') }}</a>
                     <a href="#inbox" class="hover:text-white">{{ __('Inbox') }}</a>
+                    <a href="#gyms" class="hover:text-white">{{ __('Gyms') }}</a>
                     <a href="#switch" class="hover:text-white">{{ __('Switching') }}</a>
                     <a href="#pricing" class="hover:text-white">{{ __('Pricing') }}</a>
                 </nav>
@@ -67,7 +68,7 @@
                             {{ __('Programming that') }} <span class="text-lime">{{ __('keeps up with your clients.') }}</span>
                         </h1>
                         <p class="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-300 sm:text-xl">
-                            {{ __('Build programs that progress from what each client actually lifts. Then handle every check-in, form check and message from one inbox, with replies already started.') }}
+                            {{ __('Build a program once and Spotter puts every session on your client’s calendar, week after week, moving loads up from what they actually lift. Then handle every check-in, form check and message from one inbox, with replies already started.') }}
                         </p>
                         <div class="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
                             <a href="{{ route('register') }}" class="inline-flex h-12 items-center justify-center rounded-xl bg-lime px-6 font-bold text-ink hover:bg-lime/90">{{ __('Create your coach account') }}</a>
@@ -79,7 +80,7 @@
                     <div class="relative mx-auto w-full max-w-5xl">
                         <div class="absolute -inset-x-10 -top-10 bottom-0 rounded-full bg-brand/30 blur-3xl" aria-hidden="true"></div>
                         <img src="{{ asset('images/home/program.webp') }}" width="2048" height="1520"
-                             alt="{{ __('Spotter program grid for week 2. Back squat load went from 75 to 77.5 kg and is highlighted; Romanian deadlift held because reps came in under target.') }}"
+                             alt="{{ __('The Spotter program editor: Lower A every Tuesday, with back squat, Romanian deadlift and split squats, each with sets, reps, a starting load and a rule to add load or reps each week.') }}"
                              class="relative hidden rounded-t-2xl border border-b-0 border-white/10 shadow-2xl sm:block">
                         <div class="relative mb-[-3rem] sm:hidden {{ $phone }}">
                             <img src="{{ asset('images/home/workout.webp') }}" width="780" height="1560" alt="{{ __('A client logging Back Squat sets in Spotter, with the rest timer running.') }}">
@@ -92,7 +93,7 @@
             <section class="border-b border-zinc-200 bg-zinc-50">
                 <div class="mx-auto grid max-w-6xl gap-8 px-4 py-14 sm:px-6 md:grid-cols-3">
                     @foreach ([
-                        [__('Rebuilding next week by hand'), __('Copying last week and bumping every load yourself. Spotter checks what each client logged and builds the next week for you to review.')],
+                        [__('Rebuilding every week by hand'), __('Copying sessions onto the calendar and bumping loads yourself. Build the program once: Spotter schedules every week and moves loads from what each client logged.')],
                         [__('Sunday night check-in pile'), __('Thirty check-ins, each needing a read and a reply. They land in one inbox, summarized, with the reply already started.')],
                         [__('Stuck because leaving is hard'), __('We import your client list and rebuild your programs from your exports, and tell you upfront what can’t come across.')],
                     ] as [$title, $text])
@@ -109,14 +110,14 @@
                 <div class="mx-auto grid max-w-6xl items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:py-28">
                     <div>
                         <p class="text-sm font-bold uppercase tracking-wider text-brand">{{ __('Programs') }}</p>
-                        <h2 class="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">{{ __('Write the program once. Let the logs move it forward.') }}</h2>
-                        <p class="mt-4 text-lg leading-relaxed text-zinc-600">{{ __('Set a rule on each exercise: add load, add reps, or hold. When you build next week, Spotter checks every logged set against the plan.') }}</p>
+                        <h2 class="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">{{ __('Build it once. It schedules itself.') }}</h2>
+                        <p class="mt-4 text-lg leading-relaxed text-zinc-600">{{ __('Pick the training days and weekdays, add exercises from the library and set a rule on each: add load, add reps, or hold. Every session for every week lands on your client’s calendar.') }}</p>
                         <ul class="mt-8 flex flex-col gap-4">
                             @foreach ([
-                                __('Hit every set at or under the target effort? The load goes up by your step, like 2.5 kg or 5%.'),
-                                __('Missed reps or felt too hard? The row holds, and you can see why.'),
-                                __('Changed cells are highlighted, so reviewing a new week takes seconds.'),
-                                __('A spreadsheet-style grid you can edit like a sheet, with planned vs actual for every exercise.'),
+                                __('Edit the program once and every upcoming session follows. Sessions your client has started stay exactly as they are.'),
+                                __('Each time a session is done, the coming weeks are re-planned: targets hit means the load goes up by your step; missed reps or a missed session means it holds.'),
+                                __('Need a one-off change? Edit a single session and the program leaves it alone. Skip a week with one click.'),
+                                __('A calendar of every week shows what’s done, missed, planned or edited, with planned vs actual for each exercise.'),
                             ] as $point)
                                 <li class="flex gap-3">
                                     <span class="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-lime text-xs font-extrabold text-ink" aria-hidden="true">✓</span>
@@ -159,6 +160,22 @@
                         </div>
                     </figure>
                 </div>
+                <div class="mx-auto max-w-6xl px-4 pb-20 sm:px-6 lg:pb-28">
+                    <img src="{{ asset('images/home/calendar.webp') }}" width="2048" height="846" loading="lazy"
+                         alt="{{ __('A program calendar: six weeks of Tuesday and Thursday sessions, week 1 done and weeks 2 to 6 planned.') }}"
+                         class="w-full">
+
+                    <div class="mt-16 grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+                        <div>
+                            <h3 class="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">{{ __('870+ exercises with photos and steps') }}</h3>
+                            <p class="mt-3 text-lg leading-relaxed text-zinc-600">{{ __('A full library is ready from day one: start and end photos, step-by-step instructions, muscles, equipment and level. Filter by muscle or equipment, and add your own exercises for your team.') }}</p>
+                            <p class="mt-3 leading-relaxed text-zinc-600">{{ __('Clients tap “How to” in their workout to see the photos and steps.') }}</p>
+                        </div>
+                        <img src="{{ asset('images/home/library.webp') }}" width="2048" height="1400" loading="lazy"
+                             alt="{{ __('The Spotter exercise library: cards with a photo, muscle group, equipment and level for each exercise, with filters at the top.') }}"
+                             class="rounded-2xl border border-zinc-200 shadow-xl">
+                    </div>
+                </div>
             </section>
 
             {{-- Client app --}}
@@ -185,6 +202,39 @@
                                 </figcaption>
                             </figure>
                         @endforeach
+                    </div>
+                </div>
+            </section>
+
+            {{-- Nutrition --}}
+            <section id="nutrition" class="scroll-mt-20 bg-zinc-50">
+                <div class="mx-auto grid max-w-6xl items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:py-28">
+                    <div>
+                        <p class="text-sm font-bold uppercase tracking-wider text-brand">{{ __('Nutrition') }}</p>
+                        <h2 class="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">{{ __('Nutrition without another app to manage.') }}</h2>
+                        <p class="mt-4 text-lg leading-relaxed text-zinc-600">{{ __('Clients log weight, calories, protein, carbs and fat once a day. Already tracking somewhere else? They upload their export from MacroFactor, MyFitnessPal or Lose It! and every day comes across.') }}</p>
+                        <ul class="mt-8 flex flex-col gap-4">
+                            @foreach ([
+                                __('Set daily calorie and macro targets for each client.'),
+                                __('See 7- and 30-day averages, days within 10% of calories, and weight trend at a glance.'),
+                                __('Weekly check-in summaries include the week’s nutrition, so you see training and food together.'),
+                            ] as $point)
+                                <li class="flex gap-3">
+                                    <span class="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-lime text-xs font-extrabold text-ink" aria-hidden="true">✓</span>
+                                    <span class="leading-relaxed text-zinc-700">{{ $point }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    <div class="relative">
+                        <img src="{{ asset('images/home/coach-nutrition.webp') }}" width="2048" height="1240" loading="lazy"
+                             alt="{{ __('The coach’s nutrition view for a client: 7- and 30-day averages against targets, and a daily log with weight, calories and macros.') }}"
+                             class="rounded-2xl border border-zinc-200 shadow-xl lg:me-28">
+                        <div class="absolute -bottom-12 -end-6 hidden w-40 lg:block">
+                            <div class="{{ $phone }} max-w-none border-8">
+                                <img src="{{ asset('images/home/nutrition.webp') }}" width="780" height="1560" loading="lazy" alt="{{ __('The client’s nutrition screen on a phone, with daily targets and a form to log the day.') }}">
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -226,6 +276,32 @@
                         <div class="{{ $phone }}">
                             <img src="{{ asset('images/home/focus.webp') }}" width="780" height="1560" loading="lazy" alt="{{ __('The inbox on a phone, showing one item at a time with a drafted reply and an Approve and send button.') }}">
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            {{-- Gyms --}}
+            <section id="gyms" class="scroll-mt-20 bg-zinc-50">
+                <div class="mx-auto grid max-w-6xl items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:py-28">
+                    <img src="{{ asset('images/home/team.webp') }}" width="2048" height="1120" loading="lazy"
+                         alt="{{ __('The Team page: the gym owner and a coach, each with their role and client count, and a form to invite another coach.') }}"
+                         class="order-last rounded-2xl border border-zinc-200 shadow-xl lg:order-first">
+                    <div>
+                        <p class="text-sm font-bold uppercase tracking-wider text-brand">{{ __('For gyms') }}</p>
+                        <h2 class="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">{{ __('One gym, a whole team of trainers.') }}</h2>
+                        <p class="mt-4 text-lg leading-relaxed text-zinc-600">{{ __('Invite your coaches and work from one shared exercise library and set of templates. Each coach sees their own clients; owners and admins see everyone.') }}</p>
+                        <ul class="mt-8 flex flex-col gap-4">
+                            @foreach ([
+                                __('Reassign a client to another coach in one step. Their upcoming sessions and open inbox items go with them, and the message history stays.'),
+                                __('When a coach leaves, hand their clients to someone else first. Nothing is lost.'),
+                                __('Your gym’s name and colour on the client app.'),
+                            ] as $point)
+                                <li class="flex gap-3">
+                                    <span class="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-lime text-xs font-extrabold text-ink" aria-hidden="true">✓</span>
+                                    <span class="leading-relaxed text-zinc-700">{{ $point }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
                     </div>
                 </div>
             </section>
@@ -283,9 +359,9 @@
 
                     <div class="mt-14 grid gap-6 lg:grid-cols-3">
                         @foreach ([
-                            ['name' => __('Starter'), 'price' => '$0', 'per' => __('forever'), 'blurb' => __('Try everything with your first clients.'), 'features' => [__('Up to 3 active clients'), __('Programs with progression rules'), __('Client app in English and French'), __('Coach Inbox with drafted replies')], 'cta' => __('Start free'), 'featured' => false, 'soon' => false],
+                            ['name' => __('Starter'), 'price' => '$0', 'per' => __('forever'), 'blurb' => __('Try everything with your first clients.'), 'features' => [__('Up to 3 active clients'), __('Recurring programs with progression rules'), __('870+ exercise library with photos'), __('Nutrition tracking and imports'), __('Client app in English and French'), __('Coach Inbox with drafted replies')], 'cta' => __('Start free'), 'featured' => false, 'soon' => false],
                             ['name' => __('Coach'), 'price' => '$39', 'per' => __('per month'), 'blurb' => __('Includes 15 active clients, then $1.50 per extra active client.'), 'features' => [__('Everything in Starter'), __('Unlimited programs and templates'), __('Import from TrueCoach, Trainerize or spreadsheets'), __('Your brand colour and name on the client app')], 'cta' => __('Start free'), 'featured' => true, 'soon' => false],
-                            ['name' => __('Team'), 'price' => '$99', 'per' => __('per month'), 'blurb' => __('3 coach seats and 50 active clients.'), 'features' => [__('Everything in Coach'), __('Shared client list and library'), __('Inbox for each coach')], 'cta' => __('Coming soon'), 'featured' => false, 'soon' => true],
+                            ['name' => __('Team'), 'price' => '$99', 'per' => __('per month'), 'blurb' => __('3 coach seats and 50 active clients.'), 'features' => [__('Everything in Coach'), __('Owners and admins see every client'), __('Shared exercise library and templates'), __('Reassign clients between coaches'), __('An inbox for each coach')], 'cta' => __('Start free'), 'featured' => false, 'soon' => false],
                         ] as $plan)
                             <div @class(['flex flex-col rounded-2xl p-7', 'bg-ink text-white ring-4 ring-lime' => $plan['featured'], 'border border-zinc-200' => ! $plan['featured']])>
                                 <div class="flex items-center justify-between">
@@ -366,7 +442,10 @@
                     <h2 class="text-center font-display text-3xl font-extrabold tracking-tight sm:text-4xl">{{ __('Questions coaches ask') }}</h2>
                     <div class="mt-12 divide-y divide-zinc-200 rounded-2xl border border-zinc-200 bg-white">
                         @foreach ([
-                            [__('How does progression work?'), __('Each exercise can add load, add reps or hold. When you build the next week, Spotter compares what the client logged with what you planned and only progresses the rows they earned.')],
+                            [__('Do I have to schedule every session?'), __('No. Build the program once with training days on set weekdays, and Spotter puts every session for every week on your client’s calendar. Edit the program and every upcoming session follows.')],
+                            [__('How does progression work?'), __('Each exercise can add load, add reps or hold. Each time your client finishes a session, Spotter compares what they logged with the plan and re-plans the coming weeks: targets hit means the next step, misses mean it holds.')],
+                            [__('Does Spotter track nutrition?'), __('Yes: weight, calories and macros, one entry per day, with targets you set. Clients can also upload exports from MacroFactor, MyFitnessPal or Lose It!. It’s an upload, not a live sync, because those apps don’t offer an open connection.')],
+                            [__('Can my whole gym use Spotter?'), __('Yes. Invite your coaches to your team. Each coach sees their own clients; owners and admins see everyone and can reassign clients. The library and templates are shared.')],
                             [__('Does Spotter message my clients for me?'), __('No. It starts replies for you to finish. Every reply and program change waits for you to approve, edit or dismiss it.')],
                             [__('Do my clients need to download an app?'), __('No. Spotter opens in any phone browser, and clients can add it to their home screen so it feels like an app.')],
                             [__('Can I bring my programs from TrueCoach or Trainerize?'), __('Yes. Upload your client CSV and your program files (PDF or text). Spotter rebuilds each program and asks you to confirm any exercise names it isn’t sure about. Past workout logs usually don’t come across, because those platforms don’t export them.')],
