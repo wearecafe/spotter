@@ -13,13 +13,37 @@ class Load
      */
     public static function parse(?string $load): array
     {
-        if ($load === null || ! preg_match('/(\d+(?:[.,]\d+)?)\s*(kg|kgs|lb|lbs)?/i', $load, $m)) {
+        $m = self::match($load);
+
+        if ($m === null) {
             return ['value' => null, 'unit' => null];
         }
 
-        $unit = isset($m[2]) && $m[2] !== '' ? (str_starts_with(strtolower($m[2]), 'kg') ? 'kg' : 'lb') : null;
+        $unit = $m['unit'] !== '' ? (str_starts_with(strtolower($m['unit']), 'kg') ? 'kg' : 'lb') : null;
 
-        return ['value' => (float) str_replace(',', '.', $m[1]), 'unit' => $unit];
+        return ['value' => (float) str_replace(',', '.', $m['number']), 'unit' => $unit];
+    }
+
+    /**
+     * The number that carries a unit ("16" in "2 × 16 kg"), or else the first number.
+     *
+     * @return array{number: string, unit: string, offset: int}|null
+     */
+    protected static function match(?string $load): ?array
+    {
+        if ($load === null) {
+            return null;
+        }
+
+        if (preg_match('/(\d+(?:[.,]\d+)?)\s*(kgs?|lbs?)\b/i', $load, $m, PREG_OFFSET_CAPTURE)) {
+            return ['number' => $m[1][0], 'unit' => $m[2][0], 'offset' => $m[1][1]];
+        }
+
+        if (preg_match('/\d+(?:[.,]\d+)?/', $load, $m, PREG_OFFSET_CAPTURE)) {
+            return ['number' => $m[0][0], 'unit' => '', 'offset' => $m[0][1]];
+        }
+
+        return null;
     }
 
     /**
@@ -58,8 +82,10 @@ class Load
 
         $formatted = rtrim(rtrim(number_format(max($new, 0), 2, '.', ''), '0'), '.');
 
-        // Replace only the first number so "2 × 16 kg"-style text keeps its shape after the number.
-        return preg_replace('/\d+(?:[.,]\d+)?/', $formatted, $load, 1) ?? $load;
+        // Replace only the load's number so text like "2 × 16 kg" keeps its shape.
+        $m = self::match($load);
+
+        return substr_replace($load, $formatted, $m['offset'], strlen($m['number']));
     }
 
     /**
