@@ -11,3 +11,8 @@
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 @fluxAppearance
+
+{{-- Clients see their coach's brand colour. --}}
+@if (($brand = auth()->user()?->brandOwner()?->brand_color) && preg_match('/^#[0-9A-Fa-f]{6}$/', $brand) && strtoupper($brand) !== '#0A7A55')
+    <style>:root { --color-brand: {{ $brand }}; --color-accent: {{ $brand }}; --color-accent-content: {{ $brand }}; }</style>
+@endif

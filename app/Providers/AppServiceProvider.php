@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\Import;
+use App\Models\InboxItem;
+use App\Models\Program;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -31,6 +34,12 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-client', fn (User $coach, User $client): bool => $coach->isCoach()
             && $client->isClient()
             && $client->coach_id === $coach->id);
+
+        Gate::define('manage-inbox-item', fn (User $coach, InboxItem $item): bool => $item->coach_id === $coach->id);
+
+        Gate::define('manage-program', fn (User $coach, Program $program): bool => $coach->isCoach() && $program->coach_id === $coach->id);
+
+        Gate::define('manage-import', fn (User $coach, Import $import): bool => $import->coach_id === $coach->id);
     }
 
     /**

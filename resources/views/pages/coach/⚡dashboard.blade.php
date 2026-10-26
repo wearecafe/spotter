@@ -46,6 +46,12 @@ new #[Title('Overview')] class extends Component {
     }
 
     #[Computed]
+    public function inboxCount(): int
+    {
+        return $this->coach->inboxItems()->actionable()->count();
+    }
+
+    #[Computed]
     public function recentActivity()
     {
         return Workout::query()
@@ -63,6 +69,29 @@ new #[Title('Overview')] class extends Component {
         <flux:heading size="xl" level="1">{{ __('Good to see you, :name', ['name' => str($this->coach->name)->before(' ')]) }}</flux:heading>
         <flux:text class="mt-1">{{ __("Here's how your clients are doing.") }}</flux:text>
     </div>
+
+    @unless ($this->coach->hasOnboarded())
+        <flux:callout icon="rocket-launch" color="lime">
+            <flux:callout.heading>{{ __('Finish setting up Spotter') }}</flux:callout.heading>
+            <flux:callout.text>{{ __('Bring your clients over from TrueCoach, Trainerize or spreadsheets, set your brand, and send invites.') }}</flux:callout.text>
+            <x-slot name="actions">
+                <flux:button size="sm" variant="primary" :href="route('coach.setup')" wire:navigate data-test="start-setup">{{ __('Continue setup') }}</flux:button>
+            </x-slot>
+        </flux:callout>
+    @endunless
+
+    <a href="{{ route('coach.inbox') }}" wire:navigate class="block">
+        <flux:card class="flex items-center justify-between gap-4 hover:border-zinc-400 dark:hover:border-zinc-500">
+            <div class="flex items-center gap-4">
+                <span class="font-display text-4xl font-extrabold tabular-nums text-zinc-900 dark:text-white">{{ $this->inboxCount }}</span>
+                <div>
+                    <div class="font-semibold text-zinc-900 dark:text-white">{{ __('Inbox') }}</div>
+                    <flux:text size="sm">{{ $this->inboxCount ? __('Check-ins, form checks and messages with replies drafted for you') : __('All caught up') }}</flux:text>
+                </div>
+            </div>
+            <flux:icon.arrow-right class="text-zinc-400" />
+        </flux:card>
+    </a>
 
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         @foreach ([

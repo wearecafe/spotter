@@ -50,8 +50,8 @@ class ClientTrainingTest extends TestCase
         $this->assertTrue($workout->isCompleted());
         $this->assertSame('Last set was a grind', $workout->client_feedback);
         $this->assertSame([
-            ['reps' => '8', 'load' => '135 lb', 'done' => true],
-            ['reps' => '7', 'load' => null, 'done' => false],
+            ['reps' => '8', 'load' => '135 lb', 'rpe' => null, 'done' => true],
+            ['reps' => '7', 'load' => null, 'rpe' => null, 'done' => false],
         ], $item->refresh()->logged_sets);
     }
 

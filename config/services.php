@@ -35,4 +35,17 @@ return [
         ],
     ],
 
+    // Where coaches ask for a done-for-you migration. Hidden in onboarding when unset.
+    'support' => [
+        'email' => env('SUPPORT_EMAIL'),
+    ],
+
+    // Claude powers the Coach Inbox drafts and reads imported program PDFs.
+    // Without a key, Spotter falls back to rule-based drafts and text-only imports.
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-5-5'),
+        'version' => env('ANTHROPIC_VERSION', '2023-06-01'),
+    ],
+
 ];

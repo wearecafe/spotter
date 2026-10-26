@@ -148,12 +148,12 @@ new #[Title('Workout builder')] class extends Component {
     {
         $this->save(notify: false);
 
-        $template = $this->workout->replicate(['client_id', 'scheduled_on', 'completed_at', 'client_feedback', 'template_id'])->unsetRelations();
+        $template = $this->workout->replicate(['client_id', 'scheduled_on', 'completed_at', 'client_feedback', 'reported_at', 'template_id', 'program_id', 'week', 'day'])->unsetRelations();
         $template->client_id = null;
         $template->save();
 
         foreach ($this->workout->items as $item) {
-            $template->items()->create($item->only(['exercise_id', 'position', 'sets', 'reps', 'load', 'rest_seconds', 'notes']));
+            $template->items()->create($item->only(\App\Models\WorkoutExercise::PRESCRIPTION_FIELDS));
         }
 
         Flux::toast(variant: 'success', text: __('Saved to your templates.'));

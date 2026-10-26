@@ -21,6 +21,14 @@ new #[Title('Client')] class extends Component {
 
     public string $scheduledOn = '';
 
+    public string $programTitle = '';
+
+    public string $programStart = '';
+
+    public int $programDays = 3;
+
+    public int $programWeeks = 6;
+
     public function mount(User $client): void
     {
         Gate::authorize('manage-client', $client);
@@ -29,6 +37,35 @@ new #[Title('Client')] class extends Component {
         $this->goal = (string) $client->goal;
         $this->coachNotes = (string) $client->coach_notes;
         $this->scheduledOn = today()->toDateString();
+        $this->programStart = today()->startOfWeek()->addWeek()->toDateString();
+    }
+
+    #[Computed]
+    public function programs()
+    {
+        return $this->client->programs()->withMax('workouts', 'week')->latest()->get();
+    }
+
+    public function createProgram(\App\Services\Progression $progression): void
+    {
+        $this->validate([
+            'programTitle' => ['required', 'string', 'max:120'],
+            'programStart' => ['required', 'date'],
+            'programDays' => ['required', 'integer', 'between:1,7'],
+            'programWeeks' => ['required', 'integer', 'between:1,52'],
+        ], attributes: ['programTitle' => __('title'), 'programStart' => __('start date')]);
+
+        $program = \App\Models\Program::create([
+            'coach_id' => Auth::id(),
+            'client_id' => $this->client->id,
+            'title' => $this->programTitle,
+            'starts_on' => $this->programStart,
+            'planned_weeks' => $this->programWeeks,
+        ]);
+
+        $progression->start($program, $this->programDays);
+
+        $this->redirectRoute('coach.programs.show', $program, navigate: true);
     }
 
     #[Computed]
@@ -130,6 +167,7 @@ new #[Title('Client')] class extends Component {
         </div>
 
         <div class="flex items-center gap-2">
+            <flux:button size="sm" icon="chat-bubble-left-right" :href="route('coach.clients.messages', $client)" wire:navigate>{{ __('Messages') }}</flux:button>
             @php($compliance = $client->complianceRate())
             @if ($compliance !== null)
                 <flux:badge :color="$compliance >= 80 ? 'green' : ($compliance >= 50 ? 'amber' : 'red')">{{ __(':rate% compliance (30 days)', ['rate' => $compliance]) }}</flux:badge>
@@ -152,7 +190,24 @@ new #[Title('Client')] class extends Component {
     <div class="grid gap-6 lg:grid-cols-3">
         <div class="flex flex-col gap-6 lg:col-span-2">
             <flux:card class="flex flex-col gap-4">
-                <flux:heading size="lg">{{ __('Schedule a workout') }}</flux:heading>
+                <flux:heading size="lg">{{ __('Programs') }}</flux:heading>
+                @foreach ($this->programs as $program)
+                    <a href="{{ route('coach.programs.show', $program) }}" wire:navigate wire:key="program-{{ $program->id }}" class="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 px-4 py-3 hover:border-zinc-400 dark:border-zinc-700">
+                        <span class="font-semibold text-zinc-900 dark:text-white">{{ $program->title }}</span>
+                        <flux:text size="sm">{{ __('Week :week of :planned', ['week' => $program->workouts_max_week ?? 1, 'planned' => $program->planned_weeks]) }}</flux:text>
+                    </a>
+                @endforeach
+                <form wire:submit="createProgram" class="grid gap-3 sm:grid-cols-[1fr_10rem_6rem_6rem_auto] sm:items-end">
+                    <flux:input wire:model="programTitle" :label="__('New program')" :placeholder="__('Strength block')" />
+                    <flux:input wire:model="programStart" type="date" :label="__('Starts')" />
+                    <flux:input wire:model="programDays" type="number" min="1" max="7" :label="__('Days/wk')" />
+                    <flux:input wire:model="programWeeks" type="number" min="1" max="52" :label="__('Weeks')" />
+                    <flux:button type="submit" variant="primary" data-test="create-program">{{ __('Create') }}</flux:button>
+                </form>
+            </flux:card>
+
+            <flux:card class="flex flex-col gap-4">
+                <flux:heading size="lg">{{ __('Schedule a single workout') }}</flux:heading>
                 <form wire:submit="schedule" class="flex flex-col gap-4 sm:flex-row sm:items-end">
                     <flux:select wire:model="templateId" :label="__('From template')" class="sm:flex-1">
                         <flux:select.option value="">{{ __('Blank workout (build from scratch)') }}</flux:select.option>

@@ -16,6 +16,12 @@ return [
     'default' => env('FILESYSTEM_DISK', 'local'),
 
     /*
+    | Private client media (form-check videos, progress photos). Use an object
+    | storage bucket on Laravel Cloud so files survive deploys.
+    */
+    'media_disk' => env('MEDIA_DISK', env('FILESYSTEM_DISK', 'local')),
+
+    /*
     |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
