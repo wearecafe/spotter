@@ -13,6 +13,19 @@
         @endif
     </h1>
 
+    @if ($query === '')
+        <ul class="mt-8 grid gap-3 sm:grid-cols-2">
+            @foreach ($nav as $slug => $category)
+                <li>
+                    <a href="{{ route('help.category', $slug) }}" class="flex items-center gap-3 rounded-xl border border-zinc-200 p-4 hover:border-zinc-400">
+                        <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-lime/40 text-brand-dark"><flux:icon :icon="$category['icon']" class="size-5" /></span>
+                        <span class="font-semibold">{{ __($category['title']) }}</span>
+                    </a>
+                </li>
+            @endforeach
+        </ul>
+    @endif
+
     @if ($query !== '' && $results === [])
         <p class="mt-3 text-zinc-600">{{ __('Try fewer words, or a word you’d see on the screen, like “program”, “check-in” or “invite”.') }}</p>
         <p class="mt-6"><a href="{{ route('help.index') }}" class="font-semibold text-brand hover:underline">{{ __('Browse all topics') }} →</a></p>

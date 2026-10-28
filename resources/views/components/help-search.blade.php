@@ -45,12 +45,12 @@
             @class([
                 'w-full rounded-xl border-0 bg-white ps-11 pe-4 text-ink shadow-sm ring-1 ring-zinc-300 placeholder:text-zinc-400 focus:ring-2 focus:ring-lime focus:outline-none',
                 'h-14 text-base' => $large,
-                'h-11 text-sm' => ! $large,
+                'h-11 text-base sm:text-sm' => ! $large,
             ]) />
     </div>
 
     <div x-cloak x-show="open" x-transition.opacity id="help-suggestions-{{ $large ? 'hero' : 'bar' }}" role="listbox"
-        class="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-xl bg-white text-start text-ink shadow-xl ring-1 ring-zinc-200">
+        class="absolute inset-x-0 top-full z-30 mt-2 max-h-[70dvh] overflow-y-auto rounded-xl bg-white text-start text-ink shadow-xl ring-1 ring-zinc-200">
         <template x-for="(result, i) in results" :key="result.category + result.slug">
             <a :href="result.url" role="option" :aria-selected="active === i"
                 :class="active === i ? 'bg-zinc-100' : ''"
