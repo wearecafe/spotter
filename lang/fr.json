@@ -193,5 +193,8 @@
     "Switch person": "Changer de personne",
     "Start your own": "Créer mon compte",
     "Account settings can’t be changed in the demo.": "Les paramètres du compte ne peuvent pas être modifiés dans la démo.",
-    "The demo never sends email. Start your own free account to invite people.": "La démo n’envoie jamais de courriel. Crée ton compte gratuit pour inviter des gens."
+    "The demo never sends email. Start your own free account to invite people.": "La démo n’envoie jamais de courriel. Crée ton compte gratuit pour inviter des gens.",
+    "Logged by :name in your session": "Noté par :name pendant ta séance",
+    "Logged by :name": "Noté par :name",
+    "With your coach": "Avec ton coach"
 }

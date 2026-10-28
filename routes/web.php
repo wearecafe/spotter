@@ -31,6 +31,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::livewire('/', 'pages::coach.dashboard')->name('dashboard');
         Route::livewire('setup', 'pages::coach.setup')->name('setup');
         Route::livewire('team', 'pages::coach.team')->name('team');
+        Route::livewire('train', 'pages::coach.train')->name('train');
+        Route::livewire('session', 'pages::coach.session')->name('session');
         Route::livewire('inbox', 'pages::coach.inbox')->name('inbox');
         Route::livewire('inbox/focus', 'pages::coach.inbox-focus')->name('inbox.focus');
         Route::livewire('clients', 'pages::coach.clients.index')->name('clients.index');

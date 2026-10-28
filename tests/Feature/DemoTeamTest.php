@@ -68,7 +68,7 @@ class DemoTeamTest extends TestCase
         $this->assertSame(1, Team::where('is_demo', true)->count());
         $this->assertSame('team', $team->plan);
         $this->assertSame(3, $team->coaches()->count());
-        $this->assertSame(9, $team->clients()->count());
+        $this->assertSame(11, $team->clients()->count());
         $this->assertTrue(User::where('team_id', $team->id)->get()->every(fn (User $u) => Demo::isDemoEmail($u->email)));
     }
 

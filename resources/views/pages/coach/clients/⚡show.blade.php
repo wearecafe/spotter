@@ -93,6 +93,7 @@ new #[Title('Client')] class extends Component {
     {
         return $this->client->assignedWorkouts()
             ->where(fn ($q) => $q->whereNotNull('completed_at')->orWhere('scheduled_on', '<', today()))
+            ->with('loggedBy:id,name')
             ->orderByDesc('scheduled_on')
             ->limit(20)
             ->get();
@@ -177,6 +178,32 @@ new #[Title('Client')] class extends Component {
         Flux::toast(variant: 'success', text: __(':client is now coached by :coach.', ['client' => $this->client->name, 'coach' => $coach->name]));
     }
 
+    /**
+     * Run today's session with this client (or pull their next one forward) and log it for them.
+     */
+    public function runSession(\App\Services\TrainerSession $sessions): void
+    {
+        $session = $sessions->start($this->client);
+
+        if ($session === null) {
+            Flux::toast(variant: 'warning', text: __('Nothing scheduled for :name. Build them a workout first.', ['name' => $this->client->name]));
+
+            return;
+        }
+
+        $this->redirectRoute('coach.session', ['w' => $session->id], navigate: true);
+    }
+
+    /**
+     * Switch between in-person only (no app, no invite) and an app client waiting to join.
+     */
+    public function setInPerson(bool $inPerson): void
+    {
+        abort_if($this->client->hasAcceptedInvitation(), 422);
+
+        $this->client->update(['in_person' => $inPerson]);
+    }
+
     public function removeClient(): void
     {
         $this->client->delete();
@@ -196,7 +223,8 @@ new #[Title('Client')] class extends Component {
             </div>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+            <flux:button size="sm" variant="primary" icon="play" wire:click="runSession" data-test="run-session">{{ __('Run session') }}</flux:button>
             <flux:button size="sm" icon="chart-pie" :href="route('coach.clients.nutrition', $client)" wire:navigate>{{ __('Nutrition') }}</flux:button>
             <flux:button size="sm" icon="chat-bubble-left-right" :href="route('coach.clients.messages', $client)" wire:navigate>{{ __('Messages') }}</flux:button>
             @php($compliance = $client->complianceRate())
@@ -206,7 +234,15 @@ new #[Title('Client')] class extends Component {
         </div>
     </div>
 
-    @unless ($client->hasAcceptedInvitation())
+    @if ($client->isInPersonOnly())
+        <flux:callout icon="building-storefront" data-test="in-person-callout">
+            <flux:callout.heading>{{ __(':name trains in person', ['name' => str($client->name)->before(' ')]) }}</flux:callout.heading>
+            <flux:callout.text>{{ __('They don’t use the app. Run their sessions from Train and everything you log shows up here.') }}</flux:callout.text>
+            <x-slot name="actions">
+                <flux:button size="sm" wire:click="setInPerson(false)">{{ __('Give app access') }}</flux:button>
+            </x-slot>
+        </flux:callout>
+    @elseif (! $client->hasAcceptedInvitation())
         <flux:callout icon="envelope" color="amber">
             <flux:callout.heading>{{ __("Waiting for :name to join", ['name' => str($client->name)->before(' ')]) }}</flux:callout.heading>
             <flux:callout.text>
@@ -215,8 +251,11 @@ new #[Title('Client')] class extends Component {
             <div class="mt-2">
                 <flux:input readonly copyable :value="route('invitation.accept', $client->invitation_token)" data-test="invite-link" />
             </div>
+            <x-slot name="actions">
+                <flux:button size="sm" variant="ghost" wire:click="setInPerson(true)">{{ __('In person only') }}</flux:button>
+            </x-slot>
         </flux:callout>
-    @endunless
+    @endif
 
     <div class="grid gap-6 lg:grid-cols-3">
         <div class="flex flex-col gap-6 lg:col-span-2">
@@ -297,6 +336,12 @@ new #[Title('Client')] class extends Component {
                                 <flux:badge size="sm" color="red">{{ __('Missed') }}</flux:badge>
                             @endif
                         </div>
+                        @if ($workout->loggedBy)
+                            <flux:text size="sm" class="ml-23">{{ __('Logged by :name', ['name' => $workout->loggedBy->name]) }}</flux:text>
+                        @endif
+                        @if ($workout->session_notes)
+                            <flux:text size="sm" class="ml-23 whitespace-pre-line">{{ $workout->session_notes }}</flux:text>
+                        @endif
                         @if ($workout->client_feedback)
                             <flux:text size="sm" class="ml-23 italic">“{{ $workout->client_feedback }}”</flux:text>
                         @endif

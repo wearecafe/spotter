@@ -21,7 +21,7 @@ use RuntimeException;
 
 /**
  * North Shore Strength: the fictional demo gym behind /demo. An owner, an
- * admin coach and a coach, nine clients with programs, check-ins, nutrition
+ * admin coach and a coach, eleven clients (two who train in person) with programs, check-ins, nutrition
  * and chat, all dated relative to today. Safe to run in production: it only
  * ever creates the demo team, on the reserved northshorestrength.example
  * domain, and refuses to run if one already exists.
@@ -36,7 +36,7 @@ class DemoTeamSeeder extends Seeder
      * @var list<array{key: string, name: string, title: string, description: string}>
      */
     public const ACCOUNTS = [
-        ['key' => 'alex', 'name' => 'Alex Rivera', 'title' => 'Gym owner', 'description' => 'Runs North Shore Strength. Sees every client, the Coach Inbox with drafted replies, programs, messages and the team.'],
+        ['key' => 'alex', 'name' => 'Alex Rivera', 'title' => 'Gym owner', 'description' => 'Runs North Shore Strength. Sees every client, the Coach Inbox with drafted replies and the team, and has a group session today with Gord and Linda, who train in person.'],
         ['key' => 'sam', 'name' => 'Sam Patel', 'title' => 'Coach', 'description' => 'One of Alex’s coaches. Sees only their own clients, including one who has missed sessions this week.'],
         ['key' => 'maya', 'name' => 'Maya Chen', 'title' => 'Client', 'description' => 'Two weeks into a strength block. Log today’s workout, send a check-in, track nutrition and chat with Alex.'],
         ['key' => 'luc', 'name' => 'Luc Tremblay', 'title' => 'Client, in French', 'description' => 'The client app in French, with a program and a conversation with his coach.'],
@@ -107,6 +107,8 @@ class DemoTeamSeeder extends Seeder
         $luc = $this->client('luc', 'Luc Tremblay', $alex, 'Prise de masse', 'fr');
         $sarah = $this->client('sarah', 'Sarah Kim', $alex, 'Deadlift 2× bodyweight');
         $this->client('noah', 'Noah Williams', $alex, 'Get back into training', 'en', joined: false);
+        $gord = $this->client('gord', 'Gord Wilson', $alex, 'Stay strong for skiing season', 'en', joined: false, inPerson: true);
+        $linda = $this->client('linda', 'Linda Wilson', $alex, 'Build bone density', 'en', joined: false, inPerson: true);
 
         // Sam's clients.
         $daniel = $this->client('daniel', 'Daniel Okafor', $sam, 'Run a sub-25 5K');
@@ -119,6 +121,7 @@ class DemoTeamSeeder extends Seeder
         $this->maya($alex, $maya);
         $this->otherPrograms($priya, $luc, $emma, $omar, $chloe);
         $this->sarah($alex, $sarah);
+        $this->inPerson($alex, $gord, $linda);
         $this->daniel($sam, $daniel);
         $this->conversations($alex, $sam, $maya, $priya, $luc, $emma);
         $this->nutrition($maya, $emma);
@@ -160,7 +163,7 @@ class DemoTeamSeeder extends Seeder
         return $coach->fresh();
     }
 
-    protected function client(string $key, string $name, User $coach, string $goal, string $locale = 'en', bool $joined = true): User
+    protected function client(string $key, string $name, User $coach, string $goal, string $locale = 'en', bool $joined = true, bool $inPerson = false): User
     {
         $client = new User;
         $client->forceFill([
@@ -171,6 +174,7 @@ class DemoTeamSeeder extends Seeder
             'coach_id' => $coach->id,
             'team_id' => $coach->team_id,
             'goal' => $goal,
+            'in_person' => $inPerson,
             'locale' => $locale,
             'email_verified_at' => $joined ? now() : null,
             'invitation_token' => Str::random(40),
@@ -351,14 +355,14 @@ class DemoTeamSeeder extends Seeder
     /**
      * Mark a session done with every set logged as written (the leading number of a rep range).
      */
-    protected function logAsPrescribed(Workout $session, int $hour): void
+    protected function logAsPrescribed(Workout $session, int $hour, ?User $trainer = null): void
     {
         foreach ($session->items as $item) {
-            $reps = preg_match('/^\d+/', (string) $item->reps, $m) ? $m[0] : (string) $item->reps;
+            $reps = preg_match('/^\d+(s|m)?/', (string) $item->reps, $m) ? $m[0] : (string) $item->reps;
             $item->update(['logged_sets' => array_fill(0, (int) $item->sets, ['reps' => $reps, 'load' => $item->load, 'rpe' => null, 'done' => true])]);
         }
 
-        $session->update(['completed_at' => $session->scheduled_on->setTime($hour, 15), 'reported_at' => now()]);
+        $session->update(['completed_at' => $session->scheduled_on->setTime($hour, 15), 'reported_at' => now(), 'logged_by_id' => $trainer?->id]);
     }
 
     /**
@@ -380,6 +384,48 @@ class DemoTeamSeeder extends Seeder
         }
 
         $templates['Pull day']->assignTo($sarah, today());
+    }
+
+    /**
+     * Gord and Linda train together with Alex twice a week and don't use the app:
+     * Alex logs their sessions, and today's is waiting to be run from Train.
+     */
+    protected function inPerson(User $coach, User $gord, User $linda): void
+    {
+        $templates = Workout::query()->templates()->where('coach_id', $coach->id)->get()->keyBy('title');
+        $notes = ['Good depth on squats today. Keep the bar path over mid-foot.', 'Moved well. Up 2.5 kg next time if it feels the same.', 'Tired from travel; kept it light.'];
+
+        $dates = collect(range(21, 1))->map(fn (int $daysAgo) => today()->subDays($daysAgo))
+            ->filter(fn ($date) => in_array($date->dayOfWeekIso, [2, 4], true))
+            ->values();
+
+        $loads = [
+            $gord->id => ['Back Squat' => 90, 'Romanian Deadlift' => 80, 'Lying Leg Curl' => 35, 'Bench Press' => 70, 'Barbell Row' => 60, 'Dumbbell Shoulder Press' => 18, 'Lat Pulldown' => 55, 'Triceps Pushdown' => 25],
+            $linda->id => ['Back Squat' => 45, 'Romanian Deadlift' => 40, 'Lying Leg Curl' => 20, 'Bench Press' => 30, 'Barbell Row' => 30, 'Dumbbell Shoulder Press' => 8, 'Lat Pulldown' => 30, 'Triceps Pushdown' => 12.5],
+        ];
+        $assign = function (string $template, User $client, $date, int $weeksAgo) use ($templates, $loads): Workout {
+            $session = $templates[$template]->assignTo($client, $date);
+            foreach ($session->items()->with('exercise')->get() as $item) {
+                if ($kg = $loads[$client->id][$item->exercise->name] ?? null) {
+                    // A little lighter the further back it was: they've been progressing.
+                    $item->update(['load' => rtrim(rtrim(number_format(max($kg - 2.5 * $weeksAgo, 2.5), 1), '0'), '.').' kg']);
+                }
+            }
+
+            return $session->load('items');
+        };
+
+        foreach ($dates as $i => $date) {
+            foreach ([$gord, $linda] as $client) {
+                $session = $assign($i % 2 === 0 ? 'Lower A' : 'Upper A', $client, $date, intdiv((int) $date->diffInDays(today()), 7) + 1);
+                $session->update(['session_notes' => $notes[$i % 3]]);
+                $this->logAsPrescribed($session, 7, $coach);
+            }
+        }
+
+        foreach ([$gord, $linda] as $client) {
+            $assign('Lower A', $client, today(), 0);
+        }
     }
 
     /**

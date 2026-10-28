@@ -16,7 +16,7 @@ new #[Title('My workouts')] class extends Component {
     #[Computed]
     public function today()
     {
-        return $this->client->assignedWorkouts()->whereDate('scheduled_on', today())->withCount('items')->get();
+        return $this->client->assignedWorkouts()->whereDate('scheduled_on', today())->withCount('items')->with('loggedBy:id,name')->get();
     }
 
     #[Computed]
@@ -99,7 +99,12 @@ new #[Title('My workouts')] class extends Component {
                 <flux:card class="flex items-center justify-between gap-4 hover:border-zinc-400 dark:hover:border-zinc-500">
                     <div>
                         <div class="text-lg font-semibold text-zinc-900 dark:text-white">{{ $workout->title }}</div>
-                        <flux:text>{{ trans_choice(':count exercise|:count exercises', $workout->items_count) }}</flux:text>
+                        <flux:text>
+                            {{ trans_choice(':count exercise|:count exercises', $workout->items_count) }}
+                            @if ($workout->loggedBy)
+                                · {{ __('Logged by :name', ['name' => str($workout->loggedBy->name)->before(' ')]) }}
+                            @endif
+                        </flux:text>
                     </div>
                     @if ($workout->isCompleted())
                         <flux:badge color="green" icon="check">{{ __('Done') }}</flux:badge>
@@ -138,7 +143,9 @@ new #[Title('My workouts')] class extends Component {
                         <span class="font-medium text-zinc-900 hover:underline dark:text-white">{{ $workout->title }}</span>
                         <div class="flex items-center gap-2">
                             <flux:text size="sm">{{ $workout->scheduled_on->translatedFormat('j M') }}</flux:text>
-                            @if ($workout->isCompleted())
+                            @if ($workout->isCompleted() && $workout->logged_by_id)
+                                <flux:badge size="sm" color="green" icon="check">{{ __('With your coach') }}</flux:badge>
+                            @elseif ($workout->isCompleted())
                                 <flux:badge size="sm" color="green" icon="check">{{ __('Done') }}</flux:badge>
                             @else
                                 <flux:badge size="sm" color="zinc">{{ __('Missed') }}</flux:badge>
