@@ -187,5 +187,11 @@
     ":sender sent you a message on Spotter.|:sender sent you :count messages on Spotter.": ":sender t’a envoyé un message sur Spotter.|:sender t’a envoyé :count messages sur Spotter.",
     "Reply": "Répondre",
     "You’re getting this because the message is still unread after a few minutes.": "Tu reçois ce courriel parce que le message n’a pas été lu après quelques minutes.",
-    "No messages yet.": "Aucun message pour l’instant."
+    "No messages yet.": "Aucun message pour l’instant.",
+    "You’re exploring a demo gym as :name.": "Tu explores un gym de démonstration en tant que :name.",
+    "Change anything: it resets overnight and never sends email.": "Modifie ce que tu veux : tout est réinitialisé pendant la nuit et aucun courriel n’est envoyé.",
+    "Switch person": "Changer de personne",
+    "Start your own": "Créer mon compte",
+    "Account settings can’t be changed in the demo.": "Les paramètres du compte ne peuvent pas être modifiés dans la démo.",
+    "The demo never sends email. Start your own free account to invite people.": "La démo n’envoie jamais de courriel. Crée ton compte gratuit pour inviter des gens."
 }

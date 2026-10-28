@@ -50,6 +50,9 @@
                     @auth
                         <a href="{{ route('dashboard') }}" class="inline-flex h-10 items-center rounded-lg bg-lime px-4 text-sm font-bold text-ink hover:bg-lime/90">{{ __('Open Spotter') }}</a>
                     @else
+                        @if (\App\Support\Demo::enabled())
+                            <a href="{{ route('demo') }}" class="hidden h-10 items-center rounded-lg px-3 text-sm font-semibold text-white hover:bg-white/10 lg:inline-flex">{{ __('Try the demo') }}</a>
+                        @endif
                         <a href="{{ route('login') }}" class="hidden h-10 items-center rounded-lg px-3 text-sm font-semibold text-white hover:bg-white/10 sm:inline-flex">{{ __('Log in') }}</a>
                         <a href="{{ route('register') }}" class="inline-flex h-10 items-center rounded-lg bg-lime px-4 text-sm font-bold text-ink hover:bg-lime/90">{{ __('Start free') }}</a>
                     @endauth
@@ -75,7 +78,12 @@
                             <a href="{{ route('register') }}" class="inline-flex h-12 items-center justify-center rounded-xl bg-lime px-6 font-bold text-ink hover:bg-lime/90">{{ __('Create your coach account') }}</a>
                             <a href="#switch" class="inline-flex h-12 items-center justify-center rounded-xl border border-white/20 px-6 font-semibold text-white hover:bg-white/10">{{ __('Switching from TrueCoach or Trainerize?') }}</a>
                         </div>
-                        <p class="mt-4 text-sm text-zinc-400">{{ __('Free for up to 3 clients. No card needed.') }}</p>
+                        <p class="mt-4 text-sm text-zinc-400">
+                            {{ __('Free for up to 3 clients. No card needed.') }}
+                            @if (\App\Support\Demo::enabled())
+                                <a href="{{ route('demo') }}" class="font-semibold text-lime underline-offset-4 hover:underline">{{ __('Or explore a demo gym, no sign-up →') }}</a>
+                            @endif
+                        </p>
                     </div>
 
                     <div class="relative mx-auto w-full max-w-5xl">
@@ -509,6 +517,9 @@
                     <p class="mx-auto mt-5 max-w-xl text-lg text-zinc-300">{{ __('Bring your clients and programs over as part of setup, and build next week from real logs.') }}</p>
                     <div class="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
                         <a href="{{ route('register') }}" class="inline-flex h-12 items-center justify-center rounded-xl bg-lime px-6 font-bold text-ink hover:bg-lime/90">{{ __('Create your coach account') }}</a>
+                        @if (\App\Support\Demo::enabled())
+                            <a href="{{ route('demo') }}" class="inline-flex h-12 items-center justify-center rounded-xl border border-white/20 px-6 font-semibold hover:bg-white/10">{{ __('Explore the demo gym') }}</a>
+                        @endif
                         <a href="{{ route('login') }}" class="inline-flex h-12 items-center justify-center rounded-xl border border-white/20 px-6 font-semibold hover:bg-white/10">{{ __('I’m a client, log me in') }}</a>
                     </div>
                 </div>
@@ -521,6 +532,9 @@
                 <nav aria-label="{{ __('Footer') }}" class="flex gap-6">
                     <a href="#pricing" class="hover:text-white">{{ __('Pricing') }}</a>
                     <a href="#faq" class="hover:text-white">{{ __('FAQ') }}</a>
+                    @if (\App\Support\Demo::enabled())
+                        <a href="{{ route('demo') }}" class="hover:text-white">{{ __('Demo') }}</a>
+                    @endif
                     <a href="{{ route('login') }}" class="hover:text-white">{{ __('Log in') }}</a>
                 </nav>
             </div>

@@ -9,6 +9,7 @@ use App\Models\Program;
 use App\Models\ProgramDay;
 use App\Models\User;
 use App\Models\Workout;
+use App\Support\Demo;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -125,12 +126,13 @@ class ProgramImporter
     }
 
     /**
-     * Text of a program file: plain text as-is, PDFs read by Claude when configured.
+     * Text of a program file: plain text as-is, PDFs read by Claude when configured
+     * (and allowed: the demo gym never sends visitors' uploads to Claude).
      */
-    public function programText(string $contents, string $filename): ?string
+    public function programText(string $contents, string $filename, bool $mayUseAi = true): ?string
     {
         if (Str::lower(pathinfo($filename, PATHINFO_EXTENSION)) === 'pdf' || str_starts_with($contents, '%PDF')) {
-            return $this->assistant->extractProgramText($contents);
+            return $mayUseAi ? $this->assistant->extractProgramText($contents) : null;
         }
 
         return mb_check_encoding($contents, 'UTF-8') ? $contents : null;
@@ -288,7 +290,7 @@ class ProgramImporter
                 continue;
             }
 
-            $text = $this->programText($file['contents'], $file['name']);
+            $text = $this->programText($file['contents'], $file['name'], Demo::mayUseAi($coach->team_id));
             $days = $text ? $this->parseProgram($text) : [];
 
             $programs[$client->email] = $days === []

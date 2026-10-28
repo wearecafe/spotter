@@ -1,10 +1,16 @@
 <?php
 
+use App\Http\Controllers\DemoController;
 use App\Http\Controllers\MediaController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
+
+// One-click sign-in to the demo gym (404 unless SPOTTER_DEMO=true).
+Route::get('demo', [DemoController::class, 'show'])->middleware('throttle:60,1')->name('demo');
+Route::post('demo', [DemoController::class, 'login'])->middleware('throttle:20,1')->name('demo.login');
+Route::get('demo/leave', [DemoController::class, 'leave'])->name('demo.leave');
 
 // Clients join through a link their coach shares with them.
 Route::livewire('invitation/{token}', 'pages::invitation.accept')

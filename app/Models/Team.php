@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $name
  * @property int|null $owner_id
  * @property string $plan
+ * @property bool $is_demo
  * @property CarbonInterface|null $comp_until
  * @property CarbonInterface|null $suspended_at
  * @property string|null $suspended_reason
@@ -33,6 +34,7 @@ class Team extends Model
     {
         return [
             'comp_until' => 'date',
+            'is_demo' => 'boolean',
             'suspended_at' => 'datetime',
         ];
     }

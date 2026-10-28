@@ -54,5 +54,12 @@
             <span>{{ __('Don\'t have an account?') }}</span>
             <flux:link :href="route('register')" wire:navigate>{{ __('Sign up') }}</flux:link>
         </div>
+
+        @if (\App\Support\Demo::enabled())
+            <div class="text-sm text-center text-zinc-600 dark:text-zinc-400">
+                <span>{{ __('Just looking?') }}</span>
+                <flux:link :href="route('demo')">{{ __('Explore the demo gym') }}</flux:link>
+            </div>
+        @endif
     </div>
 </x-layouts::auth>

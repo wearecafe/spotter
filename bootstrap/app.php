@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureStaff;
 use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\ProtectDemoAccounts;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\TenantGuard;
 use Illuminate\Foundation\Application;
@@ -16,7 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->web(append: [SetLocale::class, TenantGuard::class]);
+        $middleware->web(append: [SetLocale::class, TenantGuard::class, ProtectDemoAccounts::class]);
 
         $middleware->alias([
             'role' => EnsureUserHasRole::class,

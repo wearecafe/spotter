@@ -64,16 +64,19 @@ class TenantStats
      */
     public function platform(): array
     {
-        $teams = $this->teamsQuery()->get();
+        // The demo gym (/demo) isn't a customer, so it stays out of the totals.
+        $teams = $this->teamsQuery()->where('is_demo', false)->get();
+        $demoTeams = Team::query()->where('is_demo', true)->select('id');
+        $realUsers = fn () => User::query()->where(fn ($q) => $q->whereNull('team_id')->orWhereNotIn('team_id', $demoTeams));
 
         return [
             'teams' => $teams->count(),
             'new_teams_30d' => $teams->where('created_at', '>=', now()->subDays(30))->count(),
             'suspended' => $teams->filter->isSuspended()->count(),
-            'coaches' => User::where('role', Role::Coach)->count(),
-            'clients' => User::where('role', Role::Client)->count(),
-            'active_clients_7d' => User::where('role', Role::Client)->where('last_seen_at', '>=', now()->subDays(7))->count(),
-            'workouts_7d' => Workout::whereNotNull('client_id')->where('completed_at', '>=', now()->subDays(7))->count(),
+            'coaches' => $realUsers()->where('role', Role::Coach)->count(),
+            'clients' => $realUsers()->where('role', Role::Client)->count(),
+            'active_clients_7d' => $realUsers()->where('role', Role::Client)->where('last_seen_at', '>=', now()->subDays(7))->count(),
+            'workouts_7d' => Workout::whereIn('client_id', $realUsers()->select('id'))->where('completed_at', '>=', now()->subDays(7))->count(),
             'mrr_estimate' => $teams->sum(fn (Team $t) => $this->monthlyEstimate($t, $t->clients_count)),
         ];
     }

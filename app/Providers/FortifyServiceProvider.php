@@ -4,8 +4,11 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Models\User;
+use App\Support\Demo;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -38,6 +41,21 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
+
+        // Demo accounts are shared, so they're only entered through /demo,
+        // never with a password (they have random ones nobody knows anyway).
+        Fortify::authenticateUsing(function (Request $request): ?User {
+            $user = User::query()->where(Fortify::username(), $request->string(Fortify::username())->toString())->first();
+
+            if ($user === null || Demo::isDemoUser($user) || ! Hash::check($request->string('password')->toString(), (string) $user->password)) {
+                return null;
+            }
+
+            return $user;
+        });
+
+        Fortify::confirmPasswordsUsing(fn (User $user, ?string $password = null): bool => ! Demo::isDemoUser($user)
+            && Hash::check((string) $password, (string) $user->password));
     }
 
     /**
