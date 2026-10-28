@@ -50,7 +50,7 @@ new #[Title('Clients')] class extends Component {
     {
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'not_regex:/@'.preg_quote(\App\Support\Demo::DOMAIN, '/').'$/i', Rule::unique(User::class)],
             'goal' => ['nullable', 'string', 'max:255'],
             'coachId' => ['nullable', Rule::in(Auth::user()->isTeamAdmin() ? Auth::user()->teamCoachIds() : [Auth::id()])],
         ]);

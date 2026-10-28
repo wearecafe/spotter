@@ -5,6 +5,7 @@ use App\Models\StaffAuditLog;
 use App\Models\User;
 use App\Services\Chat;
 use App\Services\InboxFeed;
+use App\Support\Demo;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schedule;
@@ -26,6 +27,14 @@ Artisan::command('messages:notify-unread', function (Chat $chat) {
 })->purpose('Email people about chat messages still unread after a few minutes');
 
 Schedule::command('messages:notify-unread')->everyFiveMinutes()->withoutOverlapping();
+
+// Rebuild the demo gym every night so it's tidy and "today" always has work.
+// Only runs with SPOTTER_DEMO=true; real teams are never touched.
+Schedule::command('spotter:demo:reset --force')
+    ->dailyAt('03:00')
+    ->timezone('America/Toronto')
+    ->when(fn () => Demo::enabled())
+    ->withoutOverlapping();
 
 Artisan::command('spotter:staff {email} {--revoke}', function (string $email) {
     $user = User::firstWhere('email', strtolower($email));

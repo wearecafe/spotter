@@ -127,6 +127,9 @@ new #[Layout('layouts::admin')] #[Title('Tenants')] class extends Component {
                         <td class="px-3 py-3">
                             <span class="inline-flex flex-wrap gap-1">
                                 <flux:badge size="sm">{{ $team->planLabel() }}</flux:badge>
+                                @if ($team->is_demo)
+                                    <flux:badge size="sm" color="lime">{{ __('Demo') }}</flux:badge>
+                                @endif
                                 @if ($team->isSuspended())<flux:badge size="sm" color="red">{{ __('Suspended') }}</flux:badge>@endif
                                 @if ($team->isComped())<flux:badge size="sm" color="lime">{{ __('Comped') }}</flux:badge>@endif
                             </span>

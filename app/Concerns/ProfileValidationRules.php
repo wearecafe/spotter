@@ -3,6 +3,7 @@
 namespace App\Concerns;
 
 use App\Models\User;
+use App\Support\Demo;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rule;
 
@@ -43,6 +44,8 @@ trait ProfileValidationRules
             'string',
             'email',
             'max:255',
+            // Reserved for the demo gym's shared accounts.
+            'not_regex:/@'.preg_quote(Demo::DOMAIN, '/').'$/i',
             $userId === null
                 ? Rule::unique(User::class)
                 : Rule::unique(User::class)->ignore($userId),

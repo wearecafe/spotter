@@ -9,6 +9,7 @@ use App\Models\Message;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutExercise;
+use App\Support\Demo;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -34,7 +35,8 @@ class CoachAssistant
     {
         $context = $this->context($item);
 
-        if (config('services.anthropic.key')) {
+        // The demo gym's drafts use Claude only while it's being built, never per visitor.
+        if (config('services.anthropic.key') && Demo::mayUseAi($item->coach?->team_id)) {
             try {
                 return $this->draftWithClaude($item, $context) + ['by' => 'ai'];
             } catch (Throwable $e) {
