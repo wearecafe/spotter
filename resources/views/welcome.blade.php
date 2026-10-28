@@ -532,6 +532,7 @@
                 <nav aria-label="{{ __('Footer') }}" class="flex gap-6">
                     <a href="#pricing" class="hover:text-white">{{ __('Pricing') }}</a>
                     <a href="#faq" class="hover:text-white">{{ __('FAQ') }}</a>
+                    <a href="{{ route('help.index') }}" class="hover:text-white">{{ __('Help') }}</a>
                     @if (\App\Support\Demo::enabled())
                         <a href="{{ route('demo') }}" class="hover:text-white">{{ __('Demo') }}</a>
                     @endif

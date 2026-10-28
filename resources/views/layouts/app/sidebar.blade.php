@@ -66,6 +66,10 @@
 
             <flux:spacer />
 
+            <flux:sidebar.nav>
+                <flux:sidebar.item icon="lifebuoy" :href="auth()->user()->isClient() ? route('help.category', 'for-clients') : route('help.index')" data-test="help-link">{{ __('Help') }}</flux:sidebar.item>
+            </flux:sidebar.nav>
+
             @if (auth()->user()->is_staff)
                 <flux:sidebar.nav>
                     <flux:sidebar.item icon="shield-check" :href="route('admin.tenants')">{{ __('Spotter backoffice') }}</flux:sidebar.item>

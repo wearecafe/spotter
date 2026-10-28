@@ -88,3 +88,71 @@ select:focus[data-flux-control] {
 [x-cloak] {
     display: none !important;
 }
+
+/* Help center article bodies, rendered from Markdown (resources/help). */
+.help-prose {
+    @apply text-[15.5px] leading-7 text-zinc-800;
+
+    & > * + * {
+        @apply mt-4;
+    }
+    & h2 {
+        @apply mt-10 scroll-mt-6 font-display text-xl font-bold tracking-tight text-ink;
+    }
+    & h3 {
+        @apply mt-7 text-base font-semibold text-ink;
+    }
+    & h2 + *,
+    & h3 + * {
+        @apply mt-2;
+    }
+    & a {
+        @apply font-medium text-brand underline decoration-brand/30 underline-offset-2 hover:decoration-brand;
+    }
+    & strong {
+        @apply font-semibold text-ink;
+    }
+    & ul,
+    & ol {
+        @apply space-y-1.5 ps-6;
+    }
+    & ul {
+        @apply list-disc marker:text-zinc-400;
+    }
+    & ol {
+        @apply list-decimal marker:font-semibold marker:text-brand;
+    }
+    & li > p {
+        @apply mt-0;
+    }
+    & code {
+        @apply rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[0.85em];
+    }
+    & table {
+        @apply block w-full overflow-x-auto text-sm sm:table;
+    }
+    & th {
+        @apply border-b border-zinc-200 bg-zinc-50 px-3 py-2 text-start font-semibold;
+    }
+    & td {
+        @apply border-b border-zinc-200 px-3 py-2 align-top;
+    }
+    & blockquote {
+        @apply rounded-e-lg border-s-4 border-zinc-300 bg-zinc-50 px-4 py-3 text-[15px];
+    }
+    & blockquote.callout-tip {
+        @apply border-brand bg-brand/5;
+    }
+    & blockquote.callout-note {
+        @apply border-sky-500 bg-sky-50;
+    }
+    & blockquote.callout-heads-up {
+        @apply border-amber-500 bg-amber-50;
+    }
+    & blockquote > p > strong:first-child {
+        @apply me-1;
+    }
+    & blockquote > * + * {
+        @apply mt-2;
+    }
+}

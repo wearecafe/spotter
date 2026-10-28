@@ -308,7 +308,10 @@ new #[Title('Set up Spotter')] class extends Component {
         @elseif ($step === 2)
             <div>
                 <flux:heading size="xl" level="1">{{ __('Bring your clients with you') }}</flux:heading>
-                <flux:text class="mt-1">{{ __('Pick where you coach today. Here’s exactly what can come across.') }}</flux:text>
+                <flux:text class="mt-1">
+                    {{ __('Pick where you coach today. Here’s exactly what can come across.') }}
+                    <flux:link :href="route('help.article', ['switching', 'importing-programs'])" target="_blank">{{ __('How importing works') }}</flux:link>
+                </flux:text>
             </div>
 
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" role="radiogroup" aria-label="{{ __('Where you coach today') }}">

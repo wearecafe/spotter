@@ -1,11 +1,21 @@
 <?php
 
 use App\Http\Controllers\DemoController;
+use App\Http\Controllers\HelpController;
 use App\Http\Controllers\MediaController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
+
+// The public help center. Articles are Markdown in resources/help.
+Route::controller(HelpController::class)->prefix('help')->name('help.')->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('search', 'search')->name('search');
+    Route::get('suggest', 'suggest')->middleware('throttle:120,1')->name('suggest');
+    Route::get('{category}', 'category')->where('category', '[a-z0-9-]+')->name('category');
+    Route::get('{category}/{article}', 'article')->where(['category' => '[a-z0-9-]+', 'article' => '[a-z0-9-]+'])->name('article');
+});
 
 // One-click sign-in to the demo gym (404 unless SPOTTER_DEMO=true).
 Route::get('demo', [DemoController::class, 'show'])->middleware('throttle:60,1')->name('demo');

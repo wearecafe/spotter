@@ -558,6 +558,7 @@ new #[Title('Program')] class extends Component {
                     <li><strong>{{ __('Add reps') }}</strong>: {{ __('climbs a rep range, e.g. 8-10 to 9-10') }}</li>
                     <li><strong>{{ __('Hold') }}</strong> / <strong>{{ __('No rule') }}</strong>: {{ __('repeats the row unchanged') }}</li>
                 </ul>
+                <flux:link :href="route('help.article', ['programming', 'progression-rules'])" class="text-sm">{{ __('More about progression rules') }}</flux:link>
             </flux:card>
         </aside>
     </div>
