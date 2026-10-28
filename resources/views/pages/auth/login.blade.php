@@ -55,6 +55,10 @@
             <flux:link :href="route('register')" wire:navigate>{{ __('Sign up') }}</flux:link>
         </div>
 
+        <div class="text-sm text-center text-zinc-600 dark:text-zinc-400">
+            <flux:link :href="route('help.category', 'account')">{{ __('Trouble signing in?') }}</flux:link>
+        </div>
+
         @if (\App\Support\Demo::enabled())
             <div class="text-sm text-center text-zinc-600 dark:text-zinc-400">
                 <span>{{ __('Just looking?') }}</span>

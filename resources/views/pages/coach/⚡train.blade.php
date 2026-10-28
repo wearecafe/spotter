@@ -85,7 +85,10 @@ new #[Title('Train')] class extends Component {
 <div class="mx-auto flex w-full max-w-3xl flex-col gap-6 pb-28">
     <div>
         <flux:heading size="xl" level="1">{{ __('Train') }}</flux:heading>
-        <flux:text class="mt-1">{{ __('Run a session in the gym and log it for your clients. Pick one client, or several training together.') }}</flux:text>
+        <flux:text class="mt-1">
+            {{ __('Run a session in the gym and log it for your clients. Pick one client, or several training together.') }}
+            <flux:link :href="route('help.article', ['in-the-gym', 'running-a-session'])" class="whitespace-nowrap">{{ __('How it works') }}</flux:link>
+        </flux:text>
     </div>
 
     @php($rows = $this->rows)
