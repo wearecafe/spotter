@@ -41,6 +41,14 @@ class WorkoutPolicy
     }
 
     /**
+     * A trainer can run a session for a client they manage, logging it on the client's behalf.
+     */
+    public function run(User $user, Workout $workout): bool
+    {
+        return $user->isCoach() && $workout->client_id !== null && $user->managesClient($workout->client);
+    }
+
+    /**
      * Only the assigned client can log results against a workout.
      */
     public function log(User $user, Workout $workout): bool

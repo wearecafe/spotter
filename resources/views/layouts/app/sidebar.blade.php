@@ -16,6 +16,9 @@
                         <flux:sidebar.item icon="home" :href="route('coach.dashboard')" :current="request()->routeIs('coach.dashboard')" wire:navigate>
                             {{ __('Overview') }}
                         </flux:sidebar.item>
+                        <flux:sidebar.item icon="play-circle" :href="route('coach.train')" :current="request()->routeIs('coach.train') || request()->routeIs('coach.session')" wire:navigate>
+                            {{ __('Train') }}
+                        </flux:sidebar.item>
                         @php($inboxCount = auth()->user()->inboxItems()->actionable()->count())
                         <flux:sidebar.item icon="inbox-stack" :href="route('coach.inbox')" :current="request()->routeIs('coach.inbox*')" :badge="$inboxCount ?: null" wire:navigate>
                             {{ __('Inbox') }}

@@ -26,6 +26,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Role $role
  * @property int|null $coach_id
  * @property string|null $goal
+ * @property bool $in_person
  * @property string|null $coach_notes
  * @property string|null $invitation_token
  * @property Carbon|null $invitation_accepted_at
@@ -57,7 +58,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $updated_at
  */
 #[Fillable([
-    'name', 'email', 'password', 'role', 'coach_id', 'goal', 'coach_notes', 'invitation_token', 'invitation_accepted_at', 'invited_at',
+    'name', 'email', 'password', 'role', 'coach_id', 'goal', 'in_person', 'coach_notes', 'invitation_token', 'invitation_accepted_at', 'invited_at',
     'locale', 'business_name', 'currency', 'coaching_languages', 'client_count_band', 'brand_color', 'logo_path', 'subdomain',
     'import_source', 'contract_months_left', 'onboarded_at',
     'calorie_target', 'protein_target', 'carbs_target', 'fat_target',
@@ -80,6 +81,7 @@ class User extends Authenticatable implements HasLocalePreference
         'coaching_languages' => 'en',
         'brand_color' => '#0A7A55',
         'contract_months_left' => 0,
+        'in_person' => false,
     ];
 
     /**
@@ -97,6 +99,7 @@ class User extends Authenticatable implements HasLocalePreference
             'invited_at' => 'datetime',
             'onboarded_at' => 'datetime',
             'is_staff' => 'boolean',
+            'in_person' => 'boolean',
             'last_seen_at' => 'datetime',
         ];
     }
@@ -233,6 +236,14 @@ class User extends Authenticatable implements HasLocalePreference
     public function hasNutritionTargets(): bool
     {
         return $this->calorie_target !== null || $this->protein_target !== null;
+    }
+
+    /**
+     * Trains in person and doesn't use the app: no invite to send, and the trainer logs every session.
+     */
+    public function isInPersonOnly(): bool
+    {
+        return $this->isClient() && $this->in_person && ! $this->hasAcceptedInvitation();
     }
 
     public function hasAcceptedInvitation(): bool

@@ -29,8 +29,10 @@ use Illuminate\Support\Facades\DB;
  * @property CarbonInterface|null $reported_at
  * @property int|null $program_day_id
  * @property CarbonInterface|null $customized_at
+ * @property int|null $logged_by_id
+ * @property string|null $session_notes
  */
-#[Fillable(['coach_id', 'client_id', 'template_id', 'title', 'instructions', 'scheduled_on', 'completed_at', 'client_feedback', 'program_id', 'week', 'day', 'reported_at', 'program_day_id', 'customized_at'])]
+#[Fillable(['coach_id', 'client_id', 'template_id', 'title', 'instructions', 'scheduled_on', 'completed_at', 'client_feedback', 'program_id', 'week', 'day', 'reported_at', 'program_day_id', 'customized_at', 'logged_by_id', 'session_notes'])]
 class Workout extends Model
 {
     /** @use HasFactory<WorkoutFactory> */
@@ -44,6 +46,21 @@ class Workout extends Model
             'reported_at' => 'datetime',
             'customized_at' => 'datetime',
         ];
+    }
+
+    /**
+     * The trainer who logged this session on the client's behalf, if one did.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function loggedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'logged_by_id');
+    }
+
+    public function wasLoggedByTrainer(): bool
+    {
+        return $this->logged_by_id !== null;
     }
 
     /**

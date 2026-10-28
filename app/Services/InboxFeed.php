@@ -43,6 +43,12 @@ class InboxFeed
         $workout->update(['reported_at' => now()]);
         $client = $workout->client;
 
+        // The trainer ran it with the client: nothing to tell them that they didn't see first-hand.
+        // (Logged by a teammate covering the session, it still reaches the client's own coach.)
+        if ($workout->logged_by_id !== null && $workout->logged_by_id === $client->coach_id) {
+            return;
+        }
+
         if (filled($workout->client_feedback)) {
             $this->add($client, 'feedback', $workout, __('Feedback on :title', ['title' => $workout->title]));
         }

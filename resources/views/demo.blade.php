@@ -15,7 +15,7 @@
             <div class="mt-12">
                 <p class="text-sm font-semibold uppercase tracking-wider text-lime">{{ __('Demo gym') }}</p>
                 <h1 class="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">{{ __('Explore :team', ['team' => $team->name]) }}</h1>
-                <p class="mt-3 max-w-xl text-zinc-300">{{ __('A made-up gym with three coaches and nine clients, all dated to this week. Pick someone to sign in as. Change anything you like: it all resets overnight, and the demo never sends email.') }}</p>
+                <p class="mt-3 max-w-xl text-zinc-300">{{ __('A made-up gym with three coaches and eleven clients, all dated to this week. Pick someone to sign in as. Change anything you like: it all resets overnight, and the demo never sends email.') }}</p>
             </div>
 
             <ul class="mt-10 grid gap-4 sm:grid-cols-2">

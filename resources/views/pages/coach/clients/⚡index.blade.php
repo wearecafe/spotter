@@ -19,6 +19,9 @@ new #[Title('Clients')] class extends Component {
 
     public string $goal = '';
 
+    /** Trains in person and won't use the app: no invite, the trainer logs their sessions. */
+    public bool $inPerson = false;
+
     /** For team admins: which coach the new client is assigned to, and the list filter. */
     public string $coachId = '';
 
@@ -59,14 +62,17 @@ new #[Title('Clients')] class extends Component {
             'name' => $validated['name'],
             'email' => $validated['email'],
             'goal' => $validated['goal'],
+            'in_person' => $this->inPerson,
             'role' => Role::Client,
             'coach_id' => $this->coachId !== '' ? (int) $this->coachId : Auth::id(),
             'invitation_token' => Str::random(48),
         ]);
 
-        $this->reset('name', 'email', 'goal', 'coachId');
+        $this->reset('name', 'email', 'goal', 'coachId', 'inPerson');
         Flux::modal('add-client')->close();
-        Flux::toast(variant: 'success', text: __(':name added. Share their invite link to get them started.', ['name' => $client->name]));
+        Flux::toast(variant: 'success', text: $client->in_person
+            ? __(':name added. Run their sessions from Train.', ['name' => $client->name])
+            : __(':name added. Share their invite link to get them started.', ['name' => $client->name]));
 
         $this->redirectRoute('coach.clients.show', $client, navigate: true);
     }
@@ -127,9 +133,11 @@ new #[Title('Clients')] class extends Component {
                                     <span class="font-medium text-zinc-900 hover:underline dark:text-white">{{ $client->name }}</span>
                                     <span class="text-xs text-zinc-500">{{ $client->email }}</span>
                                 </div>
-                                @unless ($client->hasAcceptedInvitation())
+                                @if ($client->isInPersonOnly())
+                                    <flux:badge size="sm" color="zinc">{{ __('In person') }}</flux:badge>
+                                @elseif (! $client->hasAcceptedInvitation())
                                     <flux:badge size="sm" color="amber">{{ __('Invited') }}</flux:badge>
-                                @endunless
+                                @endif
                             </a>
                         </flux:table.cell>
                         @if ($this->teamCoaches->count() > 1)
@@ -160,12 +168,13 @@ new #[Title('Clients')] class extends Component {
         <form wire:submit="addClient" class="space-y-6">
             <div>
                 <flux:heading size="lg">{{ __('Add a client') }}</flux:heading>
-                <flux:text class="mt-2">{{ __("You'll get an invite link to send them so they can set a password.") }}</flux:text>
+                <flux:text class="mt-2">{{ __("You'll get an invite link to send them so they can set a password. Training them in person only? You can log their sessions without them using the app.") }}</flux:text>
             </div>
 
             <flux:input wire:model="name" :label="__('Name')" required />
             <flux:input wire:model="email" :label="__('Email')" type="email" required />
             <flux:input wire:model="goal" :label="__('Goal')" :placeholder="__('e.g. Lose 10 lb, first pull-up')" />
+            <flux:checkbox wire:model="inPerson" :label="__('In person only')" :description="__('They won’t use the app. No invite; you log their sessions in the gym.')" data-test="in-person" />
             @if ($this->teamCoaches->count() > 1)
                 <flux:select wire:model="coachId" :label="__('Coach')">
                     <flux:select.option value="">{{ __('Me') }}</flux:select.option>

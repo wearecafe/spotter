@@ -139,7 +139,9 @@ new #[Title('Messages')] class extends Component {
                 <flux:avatar :name="$selected->name" :initials="$selected->initials()" />
                 <div class="min-w-0 flex-1">
                     <flux:heading size="lg" level="2" class="truncate">{{ $selected->name }}</flux:heading>
-                    @if (! $selected->hasAcceptedInvitation())
+                    @if ($selected->isInPersonOnly())
+                        <flux:text size="sm">{{ __('Trains in person and doesn’t use the app, so they won’t see messages.') }}</flux:text>
+                    @elseif (! $selected->hasAcceptedInvitation())
                         <flux:text size="sm">{{ __('Hasn’t joined yet. They’ll see your messages when they do.') }}</flux:text>
                     @elseif ($selected->coach_id !== auth()->id())
                         <flux:text size="sm">{{ __('Coached by :name', ['name' => $selected->coach?->name]) }}</flux:text>

@@ -40,7 +40,7 @@ new #[Title('Workout')] class extends Component {
     {
         Gate::authorize('log', $workout);
 
-        $this->workout = $workout->load('items.exercise', 'items.formChecks', 'coach');
+        $this->workout = $workout->load('items.exercise', 'items.formChecks', 'coach', 'loggedBy:id,name');
         $this->feedback = (string) $workout->client_feedback;
 
         foreach ($this->workout->items as $item) {
@@ -154,6 +154,15 @@ new #[Title('Workout')] class extends Component {
         <flux:callout icon="chat-bubble-left-ellipsis">
             <flux:callout.heading>{{ __('Note from :coach', ['coach' => str($workout->coach->name)->before(' ')]) }}</flux:callout.heading>
             <flux:callout.text class="whitespace-pre-line">{{ $workout->instructions }}</flux:callout.text>
+        </flux:callout>
+    @endif
+
+    @if ($workout->loggedBy)
+        <flux:callout icon="clipboard-document-check" data-test="logged-by-trainer">
+            <flux:callout.heading>{{ __('Logged by :name in your session', ['name' => str($workout->loggedBy->name)->before(' ')]) }}</flux:callout.heading>
+            @if ($workout->session_notes)
+                <flux:callout.text class="whitespace-pre-line">{{ $workout->session_notes }}</flux:callout.text>
+            @endif
         </flux:callout>
     @endif
 
