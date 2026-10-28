@@ -15,10 +15,10 @@
             <meta name="description" content="{{ $description }}">
         @endif
     </head>
-    <body class="min-h-screen bg-white font-sans text-ink antialiased">
+    <body class="flex min-h-dvh flex-col overflow-x-clip bg-white font-sans text-ink antialiased">
         <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:start-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2">{{ __('Skip to content') }}</a>
 
-        <header class="bg-ink text-white">
+        <header class="shrink-0 bg-ink text-white">
             <div class="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
                 <a href="{{ route('help.index') }}" class="flex items-center gap-2.5">
                     <span class="flex size-8 items-center justify-center rounded-lg bg-lime text-ink"><x-app-logo-icon class="size-5" /></span>
@@ -44,7 +44,7 @@
             @endisset
         </header>
 
-        <main id="main" class="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+        <main id="main" class="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
             {{ $slot }}
 
             @if ($supportEmail)
@@ -58,7 +58,7 @@
             @endif
         </main>
 
-        <footer class="border-t border-zinc-200">
+        <footer class="shrink-0 border-t border-zinc-200">
             <div class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-zinc-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                 <span>© {{ now()->year }} Spotter</span>
                 <nav aria-label="{{ __('Help topics') }}" class="flex flex-wrap gap-x-5 gap-y-2">
