@@ -82,7 +82,7 @@ class AppServiceProvider extends ServiceProvider
 
             $user = Auth::user();
 
-            if (! $user instanceof User || ! $user->isReadOnlyClient() || ! Str::startsWith($component->getName(), ['pages::training.', 'pages::chat.'])) {
+            if (! $user instanceof User || ! $user->isReadOnlyClient() || ! Str::startsWith($component->getName(), ['pages::training.', 'pages::chat.', 'pages::habits.'])) {
                 return;
             }
 

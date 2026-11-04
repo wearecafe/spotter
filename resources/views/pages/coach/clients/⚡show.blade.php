@@ -423,6 +423,8 @@ new #[Title('Client')] class extends Component {
                 </flux:card>
             @endif
 
+            <livewire:pages::habits.board :client="$client" :key="'habits-'.$client->id" />
+
             <flux:card>
                 <form wire:submit="saveProfile" class="flex flex-col gap-4">
                     <flux:heading size="lg">{{ __('Profile') }}</flux:heading>

@@ -120,6 +120,10 @@ new #[Title('My workouts')] class extends Component {
         @endforelse
     </section>
 
+    @if ($this->client->coach_id)
+        <livewire:pages::habits.board :client="$this->client" />
+    @endif
+
     <div class="grid gap-6 lg:grid-cols-2">
         <section class="flex flex-col gap-3">
             <flux:heading size="lg">{{ __('Coming up') }}</flux:heading>

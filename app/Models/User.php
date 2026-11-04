@@ -358,6 +358,16 @@ class User extends Authenticatable implements HasLocalePreference
     }
 
     /**
+     * Habits set for this client, by their coach or by themself.
+     *
+     * @return HasMany<Habit, $this>
+     */
+    public function habits(): HasMany
+    {
+        return $this->hasMany(Habit::class, 'client_id');
+    }
+
+    /**
      * @return HasMany<CheckIn, $this>
      */
     public function checkIns(): HasMany
