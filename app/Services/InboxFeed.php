@@ -54,7 +54,23 @@ class InboxFeed
             $this->add($client, 'feedback', $workout, __('Feedback on :title', ['title' => $workout->title]));
         }
 
-        foreach ($workout->items()->with('exercise')->get() as $item) {
+        $items = $workout->items()->with('exercise')->get()->each(fn (WorkoutExercise $i) => $i->setRelation('workout', $workout));
+
+        // Two sessions running above the target RPE: suggest a lighter next session.
+        foreach (app(DeloadCheck::class)->due($client, $items) as $item) {
+            $alreadySuggested = InboxItem::query()
+                ->where('client_id', $client->id)
+                ->where('type', 'deload')
+                ->where('created_at', '>=', now()->subDays(14))
+                ->whereHasMorph('subject', [WorkoutExercise::class], fn ($q) => $q->where('exercise_id', $item->exercise_id))
+                ->exists();
+
+            if (! $alreadySuggested) {
+                $this->add($client, 'deload', $item, __('Deload? :exercise felt harder than planned twice', ['exercise' => $item->exercise->name]));
+            }
+        }
+
+        foreach ($items as $item) {
             $record = $this->newRecord($item, $client);
 
             if ($record) {

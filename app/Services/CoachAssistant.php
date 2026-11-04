@@ -40,6 +40,13 @@ class CoachAssistant
             return $this->draftWithRules($item, $context) + ['by' => 'rules'];
         }
 
+        // A deload's change is worked out by rule, never by the model; only the wording is drafted.
+        if ($item->type === 'deload') {
+            $draft = $this->draftWithRules($item, $context);
+
+            return array_merge($draft, ['suggestion' => $context['deload_suggestion'] ?? null, 'by' => 'rules']);
+        }
+
         // The demo gym's drafts use Claude only while it's being built, never per visitor.
         if (config('services.anthropic.key') && Demo::mayUseAi($item->coach?->team_id)) {
             try {
@@ -87,7 +94,10 @@ class CoachAssistant
             $context['workout'] = $subject->loadMissing('items.exercise');
         }
 
-        if ($subject instanceof WorkoutExercise && $item->type === 'pain') {
+        if ($subject instanceof WorkoutExercise && $item->type === 'deload') {
+            $context['deload_item'] = $subject->loadMissing('exercise', 'workout');
+            $context['deload_suggestion'] = app(DeloadCheck::class)->suggestion($client, $subject);
+        } elseif ($subject instanceof WorkoutExercise && $item->type === 'pain') {
             $context['pain_item'] = $subject->loadMissing('exercise', 'workout');
         } elseif ($subject instanceof WorkoutExercise) {
             $context['pr_item'] = $subject->loadMissing('exercise');
@@ -387,6 +397,16 @@ class CoachAssistant
                 $summary = __('Flagged pain on :exercise in :title.', ['exercise' => $exercise, 'title' => $p->workout->title])
                     .($p->client_note ? ' “'.Str::limit($p->client_note, 200).'”' : '');
                 $reply = $t('Thanks for flagging that, :name. Don’t push through pain on :exercise. Where exactly do you feel it, and does it hurt outside the gym too? I’ll adjust it in your next session.', ['name' => $name, 'exercise' => $exercise]);
+                break;
+            case 'deload':
+                /** @var WorkoutExercise $d */
+                $d = $context['deload_item'];
+                $exercise = $d->exercise->name;
+                $rpes = collect($d->logged_sets ?? [])->filter(fn ($s) => ($s['done'] ?? false) && filled($s['rpe'] ?? null))->pluck('rpe')->implode(', ');
+                $s = $context['deload_suggestion'] ?? null;
+                $summary = __(':exercise was logged above the RPE :target target in the last two sessions (latest: :rpes).', ['exercise' => $exercise, 'target' => $d->target_rpe, 'rpes' => $rpes ?: '—'])
+                    .' '.($s ? __('Suggested: :field :from → :to next session.', ['field' => __($s['field']), 'from' => $s['from'], 'to' => $s['to']]) : __('There’s no upcoming session of it to lighten.'));
+                $reply = $t('Your last couple of :exercise sessions felt harder than planned, :name, so I’m lightening the next one to let you recover. Tell me if anything else is going on.', ['name' => $name, 'exercise' => $exercise]);
                 break;
             case 'moved':
                 $summary = $item->headline.'.';

@@ -78,6 +78,15 @@
         @endif
     </div>
     <a href="{{ route('coach.workouts.edit', $subject->workout) }}" wire:navigate class="text-sm font-semibold text-brand hover:underline dark:text-lime">{{ __('Open workout') }}</a>
+@elseif ($subject instanceof \App\Models\WorkoutExercise && $item->type === 'deload')
+    @php($subject->loadMissing('exercise', 'workout'))
+    <div class="flex flex-col gap-1 rounded-lg bg-zinc-50 p-3 text-sm dark:bg-zinc-900" data-test="deload-context">
+        <div class="font-semibold text-zinc-900 dark:text-white">{{ $subject->exercise->name }} · {{ $subject->workout->title }}, {{ $subject->workout->scheduled_on?->translatedFormat('D j M') }}</div>
+        <div class="text-zinc-700 dark:text-zinc-300">{{ __('Planned') }}: {{ $subject->prescription() }}</div>
+        <div class="tabular-nums text-zinc-700 dark:text-zinc-300">{{ __('Logged') }}:
+            {{ collect($subject->logged_sets ?? [])->filter(fn ($s) => $s['done'] ?? false)->map(fn ($s) => ($s['reps'] ?? '—').(($s['load'] ?? null) ? ' @ '.$s['load'] : '').(($s['rpe'] ?? null) ? ' · RPE '.$s['rpe'] : ''))->implode(', ') ?: '—' }}
+        </div>
+    </div>
 @elseif ($subject instanceof \App\Models\Message)
     <a href="{{ route('coach.clients.messages', $item->client) }}" wire:navigate class="text-sm font-semibold text-brand hover:underline dark:text-lime">{{ __('Open conversation') }}</a>
 @endif

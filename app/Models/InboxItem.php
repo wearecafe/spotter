@@ -43,6 +43,7 @@ class InboxItem extends Model
         'pr' => 30,
         'pain' => 90,
         'moved' => 20,
+        'deload' => 75,
     ];
 
     public const LABELS = [
@@ -54,6 +55,7 @@ class InboxItem extends Model
         'pr' => 'Personal record',
         'pain' => 'Pain flagged',
         'moved' => 'Session moved',
+        'deload' => 'Deload suggestion',
     ];
 
     protected function casts(): array
