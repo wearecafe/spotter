@@ -34,12 +34,12 @@ class HelpCenter
         ],
         'clients' => [
             'title' => 'Clients',
-            'summary' => 'Adding clients, invite links, in-person clients, notes and compliance.',
+            'summary' => 'Adding clients, invite links, progress, habits, compliance and archiving.',
             'icon' => 'users',
         ],
         'programming' => [
             'title' => 'Programs and workouts',
-            'summary' => 'Recurring programs, progression rules, single workouts, templates and the exercise library.',
+            'summary' => 'Recurring programs, progression rules, injuries, single workouts, templates and the exercise library.',
             'icon' => 'clipboard-document-list',
         ],
         'in-the-gym' => [
@@ -74,7 +74,7 @@ class HelpCenter
         ],
         'for-clients' => [
             'title' => 'For clients',
-            'summary' => 'Help for the people you coach: joining, logging workouts, check-ins, nutrition and messages.',
+            'summary' => 'Help for the people you coach: joining, logging workouts, progress, habits, check-ins and messages.',
             'icon' => 'device-phone-mobile',
         ],
     ];

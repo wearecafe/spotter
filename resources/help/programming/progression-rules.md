@@ -46,4 +46,13 @@ Future weeks show the plan if everything goes to plan. When the client finishes 
 - **Starting mid-week**: weeks before the start don't add a step.
 - **A deload you set by hand** on one session: once it's done, the plan picks up at the planned load again instead of stepping from the lighter week.
 
+## Deload suggestions
+
+When a client logs a set above the target RPE in two sessions of the same exercise in a row, your Inbox suggests lightening the next session of it:
+
+- **10% off the load**, rounded to a usable plate jump, or
+- **one set fewer** when there's no load (bodyweight work).
+
+The change is worked out by rule, not drafted by AI. It changes only that one upcoming session, and only when you choose **Apply**. Once that lighter session is done, the plan picks up where it left off. You get at most one suggestion per exercise every two weeks.
+
 > **Tip** Range done? When a rep range reaches the top (8-10 becomes 10), Add reps stops and suggests adding load instead. Switch the rule to **Add load** and set the reps back to the bottom of the range.

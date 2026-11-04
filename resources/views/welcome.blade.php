@@ -7,7 +7,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
     <head>
         @include('partials.head', ['title' => __('Programming that keeps up with your clients')])
-        <meta name="description" content="{{ __('Spotter is coaching software for personal trainers and gyms. Build a program once and it schedules itself, progressing from what each client actually lifts. Nutrition tracking, client chat, an 870+ exercise library with photos, and one inbox for check-ins, form checks and messages. English and French.') }}">
+        <meta name="description" content="{{ __('Spotter is coaching software for personal trainers and gyms. Build a program once and it schedules itself, progressing from what each client actually lifts. Progress tracking, habits, injury-aware programming, nutrition, client chat, an 870+ exercise library with photos, and one inbox for check-ins, form checks and messages. English and French.') }}">
         @php($shareTitle = __('Spotter: programming that keeps up with your clients'))
         @php($shareText = __('Build a program once and it schedules itself, progressing from what each client actually lifts. Nutrition, an 870+ exercise library and one inbox for every check-in. For trainers and gyms, in English and French.'))
         <link rel="canonical" href="{{ url('/') }}">
@@ -127,6 +127,7 @@
                                 __('Each time a session is done, the coming weeks are re-planned: targets hit means the load goes up by your step; missed reps or a missed session means it holds.'),
                                 __('Need a one-off change? Edit a single session and the program leaves it alone. Skip a week with one click.'),
                                 __('A calendar of every week shows what’s done, missed, planned or edited, with planned vs actual for each exercise.'),
+                                __('Record a client’s injuries and every exercise that runs into them is flagged as you build. Swap an exercise across the whole program in one step.'),
                             ] as $point)
                                 <li class="flex gap-3">
                                     <span class="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-lime text-xs font-extrabold text-ink" aria-hidden="true">✓</span>
@@ -210,6 +211,20 @@
                                     <span class="mt-1 block leading-relaxed text-zinc-600">{{ $text }}</span>
                                 </figcaption>
                             </figure>
+                        @endforeach
+                    </div>
+
+                    <div class="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                        @foreach ([
+                            [__('See their progress'), __('Every lift since day one: first, best and latest, across every program. You pick how it’s measured, and they see it the same way.')],
+                            [__('Habits beyond the gym'), __('Steps, a daily walk, water. You set the targets, they tick them off, and you see how each week went. They can add their own too.')],
+                            [__('Life happens'), __('Work trip or sick kid? Clients move a session to another day that week, and you get a heads-up.')],
+                            [__('Pain flagged on the spot'), __('A note on any exercise, and a pain flag that reaches your inbox straight away, not after the workout.')],
+                        ] as [$title, $text])
+                            <div class="rounded-2xl border border-zinc-200 p-6">
+                                <h3 class="font-display text-lg font-bold">{{ $title }}</h3>
+                                <p class="mt-2 leading-relaxed text-zinc-600">{{ $text }}</p>
+                            </div>
                         @endforeach
                     </div>
                 </div>
@@ -298,8 +313,8 @@
 
                     <ol class="mt-14 grid gap-6 md:grid-cols-3">
                         @foreach ([
-                            ['1', __('It lands'), __('Weekly check-ins, form-check videos, workout feedback, new personal records, messages, and clients who missed two sessions this week.')],
-                            ['2', __('It’s started for you'), __('A short summary of what changed, a reply already started in your client’s language, and a suggested tweak to their next workout when the data supports it.')],
+                            ['1', __('It lands'), __('Weekly check-ins, form-check videos, pain flags, workout feedback, new personal records, messages, and clients who missed two sessions this week.')],
+                            ['2', __('It’s started for you'), __('A short summary of what changed, a reply already started in your client’s language, and a suggested tweak to their next workout when the data supports it, like a lighter session after two that felt too hard.')],
                             ['3', __('You decide'), __('Finish the reply in your own words and send it. Apply the program change in one click, snooze it until tomorrow, or mark it done.')],
                         ] as [$n, $title, $text])
                             <li class="relative rounded-2xl border border-zinc-200 p-6">
@@ -404,7 +419,7 @@
                     <div class="mt-14 grid gap-6 lg:grid-cols-3">
                         @foreach ([
                             ['name' => __('Starter'), 'price' => '$0', 'per' => __('forever'), 'blurb' => __('Try everything with your first clients.'), 'features' => [__('Up to 3 active clients'), __('Recurring programs with progression rules'), __('870+ exercise library with photos'), __('Nutrition tracking and imports'), __('Chat with photos and read receipts'), __('Client app in English and French'), __('Coach Inbox with drafted replies')], 'cta' => __('Start free'), 'featured' => false, 'soon' => false],
-                            ['name' => __('Coach'), 'price' => '$39', 'per' => __('per month'), 'blurb' => __('Includes 15 active clients, then $1.50 per extra active client.'), 'features' => [__('Everything in Starter'), __('Unlimited programs and templates'), __('Import from TrueCoach, Trainerize or spreadsheets'), __('Your brand colour and name on the client app')], 'cta' => __('Start free'), 'featured' => true, 'soon' => false],
+                            ['name' => __('Coach'), 'price' => '$39', 'per' => __('per month'), 'blurb' => __('Includes 15 active clients, then $1.50 per extra active client.'), 'features' => [__('Everything in Starter'), __('Unlimited programs and templates'), __('Archived clients don’t count toward your bill'), __('Import from TrueCoach, Trainerize or spreadsheets'), __('Your brand colour and name on the client app')], 'cta' => __('Start free'), 'featured' => true, 'soon' => false],
                             ['name' => __('Team'), 'price' => '$99', 'per' => __('per month'), 'blurb' => __('3 coach seats and 50 active clients.'), 'features' => [__('Everything in Coach'), __('Owners and admins see every client'), __('Shared exercise library and templates'), __('Reassign clients between coaches'), __('An inbox for each coach')], 'cta' => __('Start free'), 'featured' => false, 'soon' => false],
                         ] as $plan)
                             <div @class(['flex flex-col rounded-2xl p-7', 'bg-ink text-white ring-4 ring-lime' => $plan['featured'], 'border border-zinc-200' => ! $plan['featured']])>
@@ -431,7 +446,7 @@
                             </div>
                         @endforeach
                     </div>
-                    <p class="mt-6 text-center text-sm text-zinc-500">{{ __('Prices in USD. Spotter is in early access: create an account free today, and paid plans begin at public launch.') }}</p>
+                    <p class="mt-6 text-center text-sm text-zinc-500">{{ __('Prices in USD. Only active clients count: archive anyone you’ve stopped coaching, keep their history, and they come off your bill the next month. Spotter is in early access: create an account free today, and paid plans begin at public launch.') }}</p>
 
                     {{-- Comparison --}}
                     <div class="mt-20">

@@ -3,14 +3,14 @@ title: Logging a workout
 summary: Record each set's reps, load and effort, use the rest timer, and finish the workout.
 order: 2
 popular: true
-related: for-clients/form-checks, for-clients/sessions-with-your-trainer, programming/writing-sets-reps-and-loads
+related: for-clients/form-checks, for-clients/moving-a-session, for-clients/your-progress
 ---
 
 Your home screen shows **Today**. Tap today's workout and choose **Start**.
 
 ## Each exercise
 
-You'll see what your coach prescribed (like 4 × 5 at 75 kg), any notes, and a row for each set. Tap **How to** for photos and steps, or a demo video if your coach added one.
+You'll see what your coach prescribed (like 4 × 5 at 75 kg), what you did **last time**, any notes, and a row for each set. Tap **How to** for photos and steps, or a demo video if your coach added one.
 
 ## Log each set
 
@@ -20,12 +20,20 @@ You'll see what your coach prescribed (like 4 × 5 at 75 kg), any notes, and a r
 
 Ticking a set done starts a **rest timer** for the rest your coach set. Use **+15s** for more time or **Skip** to move on.
 
+## Add a note, or flag pain
+
+Under the sets, choose **Add a note for your coach** to say what happened, like "eased off the weight, my knee was sore".
+
+Tick **This caused pain or discomfort** if something hurt. Your coach is told right away, not just when you finish, so they can adjust your next session.
+
 ## Save or finish
 
 - **Save progress** keeps what you've logged so far, so you can come back later.
-- Add a note under **How did it go?** for your coach: energy, pain, what felt easy or hard.
+- Add a note under **How did it go?** for your coach about the whole workout: energy, what felt easy or hard.
 - **Complete workout** when you're done. Your coach sees your results, and your next weeks are planned from what you lifted.
 
 Logged something wrong? Open the workout and choose **Reopen** to fix it.
+
+Can't make it today? See [Moving a session to another day](/help/for-clients/moving-a-session).
 
 > **Tip** Hit every set, at the reps and load prescribed, at or under the target RPE? Your next session steps up. Miss some and it stays the same until you get there.

@@ -13,4 +13,4 @@ Their clients move to the coach you picked, with their programs, upcoming workou
 
 The team owner can't be removed.
 
-> **Tip** To move just a few clients between coaches, reassign them one at a time from each client's page. See [Reassigning or removing a client](/help/clients/reassigning-and-removing).
+> **Tip** To move just a few clients between coaches, reassign them one at a time from each client's page. See [Reassigning or deleting a client](/help/clients/reassigning-and-removing).

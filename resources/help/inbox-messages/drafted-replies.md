@@ -19,3 +19,5 @@ Drafts are written by AI when it's turned on for Spotter (it uses your recent me
 Sometimes the draft suggests a change to the client's next workout: one fewer set after a rough week, for example. It shows what changes, from what to what, and why. Choose **Apply** to make the change, or ignore it.
 
 Applying changes only that next session, not the program.
+
+[Deload suggestions](/help/programming/progression-rules#deload-suggestions) are always worked out by rule, never by AI, so the numbers are predictable.

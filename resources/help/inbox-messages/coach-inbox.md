@@ -17,7 +17,10 @@ The **Inbox** gathers what your clients do that's worth a reply. Each item comes
 | **Missed sessions** | A client missed two or more sessions in the past week. |
 | **Workout feedback** | A client finishes a workout and leaves a note. |
 | **Message** | A client messages you. New messages refresh the same item instead of piling up. |
+| **Pain flagged** | A client marks an exercise as causing pain. It comes first, as soon as they save. |
+| **Deload suggestion** | A lift was logged above its target RPE two sessions running. See [Progression rules](/help/programming/progression-rules#deload-suggestions). |
 | **New best** | A client lifts more than ever before on an exercise. |
+| **Session moved** | A client moved a session to another day that week. Just so you know: choose **Done, no reply**. |
 
 Items are sorted so the most urgent come first. Filter by type at the top.
 
@@ -32,4 +35,4 @@ Nothing reaches the client until you approve it.
 
 ## Clients you can see
 
-You see items for your own clients. Each coach in a gym has their own inbox.
+You see items for your own clients. Each coach in a gym has their own inbox. Items for an [archived client](/help/clients/archiving-clients) are hidden until you unarchive them.

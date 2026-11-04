@@ -92,6 +92,12 @@ final class HelpSearchIndex
         ['compliance', 'adherence', 'consistency'],
         ['photo', 'picture', 'progress photo'],
         ['library', 'exercise library', 'database'],
+        ['archive', 'deactivate', 'pause client', 'inactive', 'former client'],
+        ['habit', 'steps', 'step target', 'water', 'daily goal'],
+        ['injury', 'injured', 'restriction', 'limitation', 'pain', 'hurt'],
+        ['progress', 'history', 'pr', 'personal record', 'strength gains'],
+        ['reschedule', 'move session', 'change day', 'swap day'],
+        ['swap', 'replace', 'substitute', 'substitution'],
         ['custom exercise', 'own exercise', 'new exercise'],
         ['delete', 'remove'],
     ];
