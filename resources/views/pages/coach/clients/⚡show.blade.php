@@ -208,6 +208,37 @@ new #[Title('Client')] class extends Component {
         $this->client->update(['in_person' => $inPerson]);
     }
 
+    public string $restrictionKey = '';
+
+    public string $restrictionSide = 'both';
+
+    public string $restrictionNote = '';
+
+    public function addRestriction(): void
+    {
+        $this->validate([
+            'restrictionKey' => ['required', Rule::in(array_keys(\App\Support\Restrictions::CATALOG))],
+            'restrictionSide' => ['required', Rule::in(array_keys(\App\Support\Restrictions::SIDES))],
+            'restrictionNote' => ['nullable', 'string', 'max:200'],
+        ], attributes: ['restrictionKey' => __('restriction')]);
+
+        $restrictions = collect($this->client->restrictions ?? [])
+            ->reject(fn ($r) => ($r['key'] ?? null) === $this->restrictionKey) // one entry per restriction: re-adding updates it
+            ->push(['key' => $this->restrictionKey, 'side' => $this->restrictionSide, 'note' => $this->restrictionNote !== '' ? $this->restrictionNote : null])
+            ->values()
+            ->all();
+
+        $this->client->update(['restrictions' => $restrictions]);
+        $this->reset('restrictionKey', 'restrictionSide', 'restrictionNote');
+    }
+
+    public function removeRestriction(string $key): void
+    {
+        $restrictions = collect($this->client->restrictions ?? [])->reject(fn ($r) => ($r['key'] ?? null) === $key)->values()->all();
+
+        $this->client->update(['restrictions' => $restrictions ?: null]);
+    }
+
     public bool $canReschedule = true;
 
     public function updatedCanReschedule(): void
@@ -435,6 +466,43 @@ new #[Title('Client')] class extends Component {
                     <flux:text size="sm">{{ __('Upcoming workouts, programs and open inbox items move with the client.') }}</flux:text>
                 </flux:card>
             @endif
+
+            <flux:card class="flex flex-col gap-3" data-test="restrictions">
+                <div>
+                    <flux:heading>{{ __('Injuries and restrictions') }}</flux:heading>
+                    <flux:text size="sm">{{ __('Exercises that run into these are flagged when you build :name’s workouts and programs.', ['name' => str($client->name)->before(' ')]) }}</flux:text>
+                </div>
+                @foreach (\App\Support\Restrictions::forClient($client) as $restriction)
+                    <div class="flex items-start justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2 dark:bg-amber-500/10" wire:key="restriction-{{ $restriction['key'] }}">
+                        <div class="text-sm">
+                            <div class="font-medium text-zinc-900 dark:text-white">{{ \App\Support\Restrictions::describe($restriction) }}</div>
+                            @if ($restriction['note'])
+                                <div class="text-zinc-600 dark:text-zinc-300">{{ $restriction['note'] }}</div>
+                            @endif
+                        </div>
+                        <flux:button size="xs" variant="ghost" icon="x-mark" wire:click="removeRestriction('{{ $restriction['key'] }}')" :aria-label="__('Remove')" />
+                    </div>
+                @endforeach
+                <form wire:submit="addRestriction" class="flex flex-col gap-2">
+                    <flux:select wire:model="restrictionKey" size="sm" :aria-label="__('Restriction')" data-test="restriction-key">
+                        <flux:select.option value="">{{ __('Add a restriction…') }}</flux:select.option>
+                        @foreach (\App\Support\Restrictions::CATALOG as $key => $rule)
+                            <flux:select.option :value="$key">{{ __($rule['area']) }}: {{ __($rule['label']) }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                    <div class="grid grid-cols-[7rem_minmax(0,1fr)] gap-2">
+                        <flux:select wire:model="restrictionSide" size="sm" :aria-label="__('Side')">
+                            @foreach (\App\Support\Restrictions::SIDES as $value => $label)
+                                <flux:select.option :value="$value">{{ __($label) }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        <flux:input wire:model="restrictionNote" size="sm" :placeholder="__('Note (optional)')" :aria-label="__('Note')" />
+                    </div>
+                    <flux:error name="restrictionKey" />
+                    <flux:button type="submit" size="sm" class="self-start">{{ __('Add') }}</flux:button>
+                </form>
+                <flux:text size="sm" class="text-zinc-500">{{ __('Flags are matched on exercise names, so use your judgement too.') }}</flux:text>
+            </flux:card>
 
             <livewire:pages::habits.board :client="$client" :key="'habits-'.$client->id" />
 

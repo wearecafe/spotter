@@ -7,6 +7,7 @@ use App\Models\ProgramExercise;
 use App\Models\Workout;
 use App\Models\WorkoutExercise;
 use App\Services\ProgramScheduler;
+use App\Support\Restrictions;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -33,6 +34,9 @@ new #[Title('Program')] class extends Component {
     public ?int $historyFor = null;
 
     public ?int $addingToDay = null;
+
+    /** The blueprint row whose exercise is being swapped, when the picker is open for a swap. */
+    public ?int $swapping = null;
 
     public string $exerciseSearch = '';
 
@@ -253,9 +257,50 @@ new #[Title('Program')] class extends Component {
         $this->loadBlueprint();
     }
 
+    /**
+     * The client's injury restrictions, to flag exercises that run into them.
+     */
+    #[Computed]
+    public function restrictions()
+    {
+        return Restrictions::forClient($this->program->client);
+    }
+
+    public function openSwap(int $rowId): void
+    {
+        $this->blueprintRow($rowId);
+        $this->swapping = $rowId;
+        $this->addingToDay = null;
+        $this->exerciseSearch = '';
+        Flux::modal('program-exercise-picker')->show();
+    }
+
+    public function swapExercise(int $exerciseId): void
+    {
+        $row = $this->blueprintRow((int) $this->swapping);
+        $to = Exercise::query()->availableTo(Auth::user())->findOrFail($exerciseId);
+        $from = $row->exercise;
+
+        $leftAlone = $this->scheduler()->swapExercise($this->program, $from->id, $to->id);
+
+        $this->swapping = null;
+        Flux::modal('program-exercise-picker')->close();
+        $this->loadBlueprint();
+
+        Flux::toast(variant: 'success', text: $leftAlone
+            ? trans_choice(':from is now :to in this program. :count upcoming session you edited by hand still has :from: check it.|:from is now :to in this program. :count upcoming sessions you edited by hand still have :from: check them.', $leftAlone, ['from' => $from->name, 'to' => $to->name])
+            : __(':from is now :to everywhere in this program.', ['from' => $from->name, 'to' => $to->name]));
+    }
+
+    public function pick(int $exerciseId): void
+    {
+        $this->swapping ? $this->swapExercise($exerciseId) : $this->addExercise($exerciseId);
+    }
+
     public function openPicker(int $dayId): void
     {
         $this->blueprintDay($dayId);
+        $this->swapping = null;
         $this->addingToDay = $dayId;
         $this->exerciseSearch = '';
         Flux::modal('program-exercise-picker')->show();
@@ -371,6 +416,16 @@ new #[Title('Program')] class extends Component {
         <flux:callout.text>{{ __('Edit the program once here. Every upcoming session follows, unless the client has started it or you edited it by hand. Loads for future weeks are planned from your rules and re-planned each time :name finishes a session.', ['name' => str($program->client->name)->before(' ')]) }}</flux:callout.text>
     </flux:callout>
 
+    @if ($this->restrictions->isNotEmpty())
+        <flux:callout icon="exclamation-triangle" color="amber" data-test="client-restrictions">
+            <flux:callout.heading>{{ __(':name’s restrictions', ['name' => str($program->client->name)->before(' ')]) }}</flux:callout.heading>
+            <flux:callout.text>
+                {{ $this->restrictions->map(fn ($r) => \App\Support\Restrictions::describe($r).($r['note'] ? ' ('.$r['note'].')' : ''))->implode(' · ') }}
+                {{ __('Exercises that run into them are flagged below. Use the swap button to replace one everywhere.') }}
+            </flux:callout.text>
+        </flux:callout>
+    @endif
+
     <flux:card>
         <form wire:submit="saveSettings" class="grid gap-4 sm:grid-cols-[1fr_11rem_7rem_auto_auto] sm:items-end">
             <flux:input wire:model="title" :label="__('Program name')" />
@@ -424,6 +479,9 @@ new #[Title('Program')] class extends Component {
                                                 @endif
                                                 <span>{{ $row->exercise->name }}</span>
                                             </button>
+                                            @foreach (\App\Support\Restrictions::conflictsFor($row->exercise, $this->restrictions) as $conflict)
+                                                <div class="mt-0.5 text-xs font-medium text-amber-700 dark:text-amber-400" data-test="restriction-conflict">⚠ {{ \App\Support\Restrictions::describe($conflict) }}</div>
+                                            @endforeach
                                             @if ($row->base_week > 1)
                                                 <div class="text-xs text-zinc-500">{{ __('Values apply from week :n', ['n' => $row->base_week]) }}</div>
                                             @endif
@@ -452,6 +510,7 @@ new #[Title('Program')] class extends Component {
                                         <td class="px-1 py-1.5 text-end whitespace-nowrap">
                                             <flux:button size="xs" variant="ghost" icon="chevron-up" wire:click="moveExercise({{ $row->id }}, -1)" :disabled="$loop->first" :aria-label="__('Move up')" />
                                             <flux:button size="xs" variant="ghost" icon="chevron-down" wire:click="moveExercise({{ $row->id }}, 1)" :disabled="$loop->last" :aria-label="__('Move down')" />
+                                            <flux:button size="xs" variant="ghost" icon="arrows-right-left" wire:click="openSwap({{ $row->id }})" :aria-label="__('Swap :exercise everywhere in this program', ['exercise' => $row->exercise->name])" :tooltip="__('Swap everywhere')" data-test="swap-exercise" />
                                             <flux:button size="xs" variant="ghost" icon="trash" wire:click="removeExercise({{ $row->id }})" wire:confirm="{{ __('Remove :exercise from every upcoming :day?', ['exercise' => $row->exercise->name, 'day' => $day->title]) }}" :aria-label="__('Remove')" />
                                         </td>
                                     </tr>
@@ -565,18 +624,30 @@ new #[Title('Program')] class extends Component {
 
     <flux:modal name="program-exercise-picker" class="w-full md:w-[32rem]">
         <div class="flex flex-col gap-4">
-            <flux:heading size="lg">{{ __('Add an exercise') }}</flux:heading>
+            @if ($swapping && ($swapRow = $this->days->flatMap->exercises->firstWhere('id', $swapping)))
+                <div>
+                    <flux:heading size="lg">{{ __('Swap :exercise', ['exercise' => $swapRow->exercise->name]) }}</flux:heading>
+                    <flux:text class="mt-1">{{ __('Replaces it on every day of this program, keeping the sets, reps and rules. Sessions already done, started or edited by hand keep it.') }}</flux:text>
+                </div>
+            @else
+                <flux:heading size="lg">{{ __('Add an exercise') }}</flux:heading>
+            @endif
             <flux:input wire:model.live.debounce.250ms="exerciseSearch" icon="magnifying-glass" :placeholder="__('Search exercises')" autofocus />
             <div class="flex max-h-96 flex-col divide-y divide-zinc-100 overflow-y-auto dark:divide-zinc-700">
                 @foreach ($this->exerciseResults as $exercise)
-                    <button type="button" wire:click="addExercise({{ $exercise->id }})" wire:key="pp-{{ $exercise->id }}" class="flex items-center justify-between gap-3 px-1 py-2 text-start hover:bg-zinc-50 dark:hover:bg-zinc-700/50">
+                    <button type="button" wire:click="pick({{ $exercise->id }})" wire:key="pp-{{ $exercise->id }}" class="flex items-center justify-between gap-3 px-1 py-2 text-start hover:bg-zinc-50 dark:hover:bg-zinc-700/50">
                         <span class="flex min-w-0 items-center gap-3">
                             @if ($thumb = $exercise->imageUrls()[0] ?? null)
                                 <img src="{{ $thumb }}" alt="" loading="lazy" class="size-9 shrink-0 rounded bg-zinc-100 object-cover">
                             @else
                                 <span class="size-9 shrink-0 rounded bg-zinc-100 dark:bg-zinc-800"></span>
                             @endif
-                            <span class="truncate font-medium text-zinc-900 dark:text-white">{{ $exercise->name }}</span>
+                            <span class="min-w-0">
+                                <span class="block truncate font-medium text-zinc-900 dark:text-white">{{ $exercise->name }}</span>
+                                @foreach (\App\Support\Restrictions::conflictsFor($exercise, $this->restrictions) as $conflict)
+                                    <span class="block text-xs font-medium text-amber-700 dark:text-amber-400">⚠ {{ \App\Support\Restrictions::describe($conflict) }}</span>
+                                @endforeach
+                            </span>
                         </span>
                         <span class="shrink-0 text-sm text-zinc-500">{{ collect([$exercise->muscle_group, $exercise->equipment])->filter()->implode(' · ') }}</span>
                     </button>

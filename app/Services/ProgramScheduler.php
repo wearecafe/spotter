@@ -339,6 +339,33 @@ class ProgramScheduler
     }
 
     /**
+     * Replace one exercise with another everywhere in a program (every day it appears on), for
+     * example to work around an injury. Sets, reps and rules stay. Sessions already done, started
+     * or edited by hand keep what they had.
+     *
+     * @return int upcoming hand-edited sessions that still have the old exercise, for the coach to check
+     */
+    public function swapExercise(Program $program, int $fromExerciseId, int $toExerciseId): int
+    {
+        return DB::transaction(function () use ($program, $fromExerciseId, $toExerciseId) {
+            ProgramExercise::query()
+                ->where('exercise_id', $fromExerciseId)
+                ->whereHas('day', fn ($q) => $q->where('program_id', $program->id))
+                ->update(['exercise_id' => $toExerciseId]);
+
+            $this->sync($program);
+
+            return Workout::query()
+                ->where('program_id', $program->id)
+                ->whereNull('completed_at')
+                ->where('scheduled_on', '>=', today())
+                ->whereNotNull('customized_at')
+                ->whereHas('items', fn ($q) => $q->where('exercise_id', $fromExerciseId))
+                ->count();
+        });
+    }
+
+    /**
      * Mark a session as edited by hand so program edits stop changing it.
      */
     public function customize(Workout $session): void

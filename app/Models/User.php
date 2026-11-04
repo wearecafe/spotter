@@ -35,6 +35,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string $archived_client_access
  * @property string $history_metric
  * @property string|null $coach_notes
+ * @property list<array{key: string, side?: string|null, note?: string|null}>|null $restrictions
  * @property string|null $invitation_token
  * @property Carbon|null $invitation_accepted_at
  * @property Carbon|null $invited_at
@@ -69,6 +70,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
     'locale', 'business_name', 'currency', 'coaching_languages', 'client_count_band', 'brand_color', 'logo_path', 'subdomain',
     'import_source', 'contract_months_left', 'onboarded_at',
     'calorie_target', 'protein_target', 'carbs_target', 'fat_target', 'auto_archive_days', 'archived_client_access', 'history_metric',
+    'restrictions',
     // team_id, team_role, is_staff and the archived_* columns are deliberately not mass assignable.
 ])]
 #[Hidden(['password', 'invitation_token', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
@@ -114,6 +116,7 @@ class User extends Authenticatable implements HasLocalePreference
             'is_staff' => 'boolean',
             'in_person' => 'boolean',
             'can_reschedule' => 'boolean',
+            'restrictions' => 'array',
             'last_seen_at' => 'datetime',
             'archived_at' => 'datetime',
             'auto_archive_days' => 'integer',

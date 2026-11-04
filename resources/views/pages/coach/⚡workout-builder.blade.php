@@ -2,6 +2,7 @@
 
 use App\Models\Exercise;
 use App\Models\Workout;
+use App\Support\Restrictions;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -57,8 +58,18 @@ new #[Title('Workout builder')] class extends Component {
                 'logged_sets' => $item->logged_sets,
                 'client_note' => $item->client_note,
                 'pain' => $item->pain,
+                'conflicts' => Restrictions::conflictsFor($item->exercise, $this->restrictions)->map(fn ($r) => Restrictions::describe($r))->all(),
             ])
             ->all();
+    }
+
+    /**
+     * The client's injury restrictions (none for templates).
+     */
+    #[Computed]
+    public function restrictions()
+    {
+        return Restrictions::forClient($this->workout->client);
     }
 
     #[Computed]
@@ -269,6 +280,15 @@ new #[Title('Workout builder')] class extends Component {
         </flux:callout>
     @endif
 
+    @if ($this->restrictions->isNotEmpty())
+        <flux:callout icon="exclamation-triangle" color="amber" data-test="client-restrictions">
+            <flux:callout.heading>{{ __(':name’s restrictions', ['name' => str($workout->client->name)->before(' ')]) }}</flux:callout.heading>
+            <flux:callout.text>
+                {{ $this->restrictions->map(fn ($r) => \App\Support\Restrictions::describe($r).($r['note'] ? ' ('.$r['note'].')' : ''))->implode(' · ') }}
+            </flux:callout.text>
+        </flux:callout>
+    @endif
+
     <flux:card class="flex flex-col gap-4">
         <div class="flex flex-col gap-4 md:flex-row">
             <div class="md:flex-1">
@@ -294,6 +314,9 @@ new #[Title('Workout builder')] class extends Component {
                             @if ($item['muscle_group'])
                                 <flux:text size="sm">{{ $item['muscle_group'] }}</flux:text>
                             @endif
+                            @foreach ($item['conflicts'] ?? [] as $conflict)
+                                <flux:badge size="sm" color="amber" icon="exclamation-triangle" class="mt-1" data-test="restriction-conflict">{{ $conflict }}</flux:badge>
+                            @endforeach
                         </div>
                     </div>
                     <div class="flex gap-1">
@@ -358,7 +381,12 @@ new #[Title('Workout builder')] class extends Component {
                             @else
                                 <span class="size-9 shrink-0 rounded bg-zinc-100 dark:bg-zinc-800"></span>
                             @endif
-                            <span class="truncate font-medium text-zinc-900 dark:text-white">{{ $exercise->name }}</span>
+                            <span class="min-w-0">
+                                <span class="block truncate font-medium text-zinc-900 dark:text-white">{{ $exercise->name }}</span>
+                                @foreach (\App\Support\Restrictions::conflictsFor($exercise, $this->restrictions) as $conflict)
+                                    <span class="block text-xs font-medium text-amber-700 dark:text-amber-400">⚠ {{ \App\Support\Restrictions::describe($conflict) }}</span>
+                                @endforeach
+                            </span>
                         </span>
                         <span class="shrink-0 text-sm text-zinc-500">{{ collect([$exercise->muscle_group, $exercise->equipment])->filter()->implode(' · ') }}</span>
                     </button>
