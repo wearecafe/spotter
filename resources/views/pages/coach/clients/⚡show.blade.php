@@ -47,6 +47,7 @@ new #[Title('Client')] class extends Component {
         $this->goal = (string) $client->goal;
         $this->coachNotes = (string) $client->coach_notes;
         $this->scheduledOn = today()->toDateString();
+        $this->archiveAccess = Auth::user()->archived_client_access ?: 'read_only';
         $this->programStart = today()->startOfWeek()->addWeek()->toDateString();
     }
 
@@ -183,6 +184,8 @@ new #[Title('Client')] class extends Component {
      */
     public function runSession(\App\Services\TrainerSession $sessions): void
     {
+        abort_if($this->client->isArchived(), 422);
+
         $session = $sessions->start($this->client);
 
         if ($session === null) {
@@ -204,11 +207,46 @@ new #[Title('Client')] class extends Component {
         $this->client->update(['in_person' => $inPerson]);
     }
 
+    public string $archiveAccess = 'read_only';
+
+    /**
+     * Take the client out of day-to-day work and off next month's bill, keeping everything.
+     */
+    public function archive(\App\Services\ClientArchive $archive): void
+    {
+        $this->validate(['archiveAccess' => ['required', Rule::in(array_keys(User::ARCHIVED_ACCESS))]]);
+
+        $archive->archive($this->client, $this->archiveAccess);
+        $this->client->refresh();
+        Flux::modal('archive-client')->close();
+
+        Flux::toast(variant: 'success', text: __(':name is archived. Their history is kept and they come off your bill next month.', ['name' => $this->client->name]));
+    }
+
+    public function unarchive(\App\Services\ClientArchive $archive): void
+    {
+        $archive->unarchive($this->client);
+        $this->client->refresh();
+
+        Flux::toast(variant: 'success', text: __(':name is active again.', ['name' => $this->client->name]));
+    }
+
+    public function setArchivedAccess(string $access, \App\Services\ClientArchive $archive): void
+    {
+        abort_unless($this->client->isArchived() && array_key_exists($access, User::ARCHIVED_ACCESS), 422);
+
+        $archive->setAccess($this->client, $access);
+        $this->client->refresh();
+    }
+
+    /**
+     * Permanently delete the client and everything they logged. For erasure requests; archive is the everyday option.
+     */
     public function removeClient(): void
     {
         $this->client->delete();
 
-        Flux::toast(text: __('Client removed.'));
+        Flux::toast(text: __('Client deleted.'));
         $this->redirectRoute('coach.clients.index', navigate: true);
     }
 }; ?>
@@ -224,7 +262,9 @@ new #[Title('Client')] class extends Component {
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-            <flux:button size="sm" variant="primary" icon="play" wire:click="runSession" data-test="run-session">{{ __('Run session') }}</flux:button>
+            @unless ($client->isArchived())
+                <flux:button size="sm" variant="primary" icon="play" wire:click="runSession" data-test="run-session">{{ __('Run session') }}</flux:button>
+            @endunless
             <flux:button size="sm" icon="chart-pie" :href="route('coach.clients.nutrition', $client)" wire:navigate>{{ __('Nutrition') }}</flux:button>
             <flux:button size="sm" icon="chat-bubble-left-right" :href="route('coach.clients.messages', $client)" wire:navigate>{{ __('Messages') }}</flux:button>
             @php($compliance = $client->complianceRate())
@@ -234,7 +274,24 @@ new #[Title('Client')] class extends Component {
         </div>
     </div>
 
-    @if ($client->isInPersonOnly())
+    @if ($client->isArchived())
+        <flux:callout icon="archive-box" color="zinc" data-test="archived-callout">
+            <flux:callout.heading>{{ $client->archived_reason === 'inactive'
+                ? __('Archived :date after a stretch with no activity', ['date' => $client->archived_at->translatedFormat('j M Y')])
+                : __('Archived :date', ['date' => $client->archived_at->translatedFormat('j M Y')]) }}</flux:callout.heading>
+            <flux:callout.text>{{ __('Everything is kept. They’re out of your lists, inbox and Train, and stop counting toward your bill from next month.') }}</flux:callout.text>
+            <div class="mt-3 max-w-xs">
+                <flux:select wire:change="setArchivedAccess($event.target.value)" :label="__('While archived, they')" data-test="archived-access">
+                    @foreach (\App\Models\User::ARCHIVED_ACCESS as $value => $label)
+                        <flux:select.option :value="$value" :selected="$client->archived_access === $value">{{ __($label) }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            </div>
+            <x-slot name="actions">
+                <flux:button size="sm" variant="primary" wire:click="unarchive" data-test="unarchive-client">{{ __('Unarchive') }}</flux:button>
+            </x-slot>
+        </flux:callout>
+    @elseif ($client->isInPersonOnly())
         <flux:callout icon="building-storefront" data-test="in-person-callout">
             <flux:callout.heading>{{ __(':name trains in person', ['name' => str($client->name)->before(' ')]) }}</flux:callout.heading>
             <flux:callout.text>{{ __('They don’t use the app. Run their sessions from Train and everything you log shows up here.') }}</flux:callout.text>
@@ -374,11 +431,43 @@ new #[Title('Client')] class extends Component {
                 </form>
             </flux:card>
 
+            @unless ($client->isArchived())
+                <flux:card class="flex flex-col gap-3">
+                    <flux:heading>{{ __('Archive client') }}</flux:heading>
+                    <flux:text size="sm">{{ __('Stopped coaching them? Archive keeps every workout, check-in and message, takes them out of your lists and inbox, and stops them counting toward your bill from next month. You can unarchive any time.') }}</flux:text>
+                    <flux:modal.trigger name="archive-client">
+                        <flux:button size="sm" icon="archive-box" class="self-start" data-test="archive-client">{{ __('Archive') }}</flux:button>
+                    </flux:modal.trigger>
+                </flux:card>
+            @endunless
+
             <flux:card class="flex flex-col gap-3">
-                <flux:heading>{{ __('Remove client') }}</flux:heading>
-                <flux:text size="sm">{{ __('Deletes their account and all of their workout history.') }}</flux:text>
-                <flux:button variant="danger" size="sm" class="self-start" wire:click="removeClient" wire:confirm="{{ __('Remove :name and all their history? This cannot be undone.', ['name' => $client->name]) }}">{{ __('Remove client') }}</flux:button>
+                <flux:heading>{{ __('Delete permanently') }}</flux:heading>
+                <flux:text size="sm">{{ __('Only for when they ask you to erase their data. Deletes their account and all of their history for good.') }}</flux:text>
+                <flux:button variant="danger" size="sm" class="self-start" wire:click="removeClient" wire:confirm="{{ __('Delete :name and all their history? This cannot be undone. To stop coaching them but keep their history, archive them instead.', ['name' => $client->name]) }}" data-test="delete-client">{{ __('Delete client') }}</flux:button>
             </flux:card>
         </div>
     </div>
+
+    <flux:modal name="archive-client" class="md:w-96">
+        <form wire:submit="archive" class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Archive :name?', ['name' => $client->name]) }}</flux:heading>
+                <flux:text class="mt-2">{{ __('Their workouts, check-ins and messages are all kept. They leave your client list, inbox and Train, and stop counting toward your bill from next month.') }}</flux:text>
+            </div>
+
+            <flux:radio.group wire:model="archiveAccess" :label="__('While archived, they')">
+                @foreach (\App\Models\User::ARCHIVED_ACCESS as $value => $label)
+                    <flux:radio :value="$value" :label="__($label)" />
+                @endforeach
+            </flux:radio.group>
+
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="primary" data-test="confirm-archive">{{ __('Archive') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
 </div>

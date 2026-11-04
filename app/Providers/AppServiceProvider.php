@@ -58,6 +58,37 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-import', fn (User $coach, Import $import): bool => $import->coach_id === $coach->id);
 
         $this->protectDemo();
+        $this->protectArchivedClients();
+    }
+
+    /**
+     * Read-only actions an archived client may still run on their training pages.
+     *
+     * @var list<string>
+     */
+    protected const ARCHIVED_CLIENT_ALLOWED_ACTIONS = ['checkForNew', 'loadEarlier'];
+
+    /**
+     * An archived client with read-only access can look back at their history but change nothing:
+     * no logging, check-ins, nutrition, messages, habits or rescheduling. (Locked-out clients are
+     * signed out by TenantGuard.) Account settings stay open so they can manage their own login.
+     */
+    protected function protectArchivedClients(): void
+    {
+        Livewire::listen('call', function (Component $component, string $method, $params, $context, callable $returnEarly) {
+            if (str_starts_with($method, '$') || str_starts_with($method, '__') || in_array($method, self::ARCHIVED_CLIENT_ALLOWED_ACTIONS, true)) {
+                return;
+            }
+
+            $user = Auth::user();
+
+            if (! $user instanceof User || ! $user->isReadOnlyClient() || ! Str::startsWith($component->getName(), ['pages::training.', 'pages::chat.'])) {
+                return;
+            }
+
+            Flux::toast(variant: 'warning', text: __('Your coaching is archived, so you can look back but not log anything new. Ask your coach to reactivate it.'));
+            $returnEarly();
+        });
     }
 
     /**

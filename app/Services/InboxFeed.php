@@ -98,7 +98,7 @@ class InboxFeed
     {
         $created = 0;
 
-        foreach ($coach->clients()->get() as $client) {
+        foreach ($coach->clients()->whereNull('archived_at')->get() as $client) {
             $missed = $client->assignedWorkouts()
                 ->whereNull('completed_at')
                 ->whereBetween('scheduled_on', [today()->subDays(7), today()->subDay()])
@@ -166,7 +166,7 @@ class InboxFeed
 
     protected function add(User $client, string $type, ?Model $subject, string $headline, ?string $summary = null): ?InboxItem
     {
-        if (! $client->coach_id) {
+        if (! $client->coach_id || $client->isArchived()) {
             return null;
         }
 

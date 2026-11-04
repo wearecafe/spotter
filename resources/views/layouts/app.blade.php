@@ -13,6 +13,13 @@
             </div>
         @endif
 
+        @if (auth()->user()->isReadOnlyClient())
+            <div class="-mt-2 mb-6 rounded-xl border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-zinc-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-zinc-200" data-test="archived-banner">
+                <span class="font-semibold">{{ __('Your coaching is archived.') }}</span>
+                {{ __('You can look back at your workouts, check-ins and messages, but nothing new can be logged. Ask :coach to reactivate you.', ['coach' => auth()->user()->coach?->name ?? __('your coach')]) }}
+            </div>
+        @endif
+
         {{ $slot }}
     </flux:main>
 </x-layouts::app.sidebar>

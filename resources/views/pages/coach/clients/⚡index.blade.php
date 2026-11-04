@@ -27,6 +27,47 @@ new #[Title('Clients')] class extends Component {
 
     public string $coachFilter = '';
 
+    /** active or archived */
+    #[\Livewire\Attributes\Url(as: 'show', except: 'active')]
+    public string $status = 'active';
+
+    /** The coach's archiving settings. */
+    public string $autoArchiveDays = '';
+
+    public string $archivedClientAccess = 'read_only';
+
+    public const AUTO_ARCHIVE_OPTIONS = [30, 60, 90, 180];
+
+    public function mount(): void
+    {
+        $this->autoArchiveDays = (string) Auth::user()->auto_archive_days;
+        $this->archivedClientAccess = Auth::user()->archived_client_access ?: 'read_only';
+    }
+
+    #[Computed]
+    public function archivedCount(): int
+    {
+        return Auth::user()->visibleClients(withArchived: true)->whereNotNull('archived_at')->count();
+    }
+
+    public function saveArchiving(): void
+    {
+        $this->validate([
+            'autoArchiveDays' => ['nullable', Rule::in(array_map('strval', self::AUTO_ARCHIVE_OPTIONS))],
+            'archivedClientAccess' => ['required', Rule::in(array_keys(User::ARCHIVED_ACCESS))],
+        ]);
+
+        Auth::user()->update([
+            'auto_archive_days' => $this->autoArchiveDays !== '' ? (int) $this->autoArchiveDays : null,
+            'archived_client_access' => $this->archivedClientAccess,
+        ]);
+
+        Flux::modal('archive-settings')->close();
+        Flux::toast(variant: 'success', text: $this->autoArchiveDays !== ''
+            ? __('Clients with no activity for :days days will be archived automatically.', ['days' => $this->autoArchiveDays])
+            : __('Automatic archiving is off.'));
+    }
+
     #[Computed]
     public function teamCoaches()
     {
@@ -38,7 +79,8 @@ new #[Title('Clients')] class extends Component {
     #[Computed]
     public function clients()
     {
-        return Auth::user()->visibleClients()
+        return Auth::user()->visibleClients(withArchived: true)
+            ->when($this->status === 'archived', fn ($q) => $q->whereNotNull('archived_at'), fn ($q) => $q->whereNull('archived_at'))
             ->when($this->coachFilter !== '', fn ($q) => $q->where('coach_id', (int) $this->coachFilter))
             ->with('coach:id,name')
             ->when($this->search, fn ($q) => $q->where(fn ($q) => $q
@@ -85,12 +127,21 @@ new #[Title('Clients')] class extends Component {
             <flux:text class="mt-1">{{ __('Everyone you coach, at a glance.') }}</flux:text>
         </div>
 
-        <flux:modal.trigger name="add-client">
-            <flux:button variant="primary" icon="plus" data-test="add-client-button">{{ __('Add client') }}</flux:button>
-        </flux:modal.trigger>
+        <div class="flex gap-2">
+            <flux:modal.trigger name="archive-settings">
+                <flux:button icon="archive-box" data-test="archive-settings-button">{{ __('Archiving') }}</flux:button>
+            </flux:modal.trigger>
+            <flux:modal.trigger name="add-client">
+                <flux:button variant="primary" icon="plus" data-test="add-client-button">{{ __('Add client') }}</flux:button>
+            </flux:modal.trigger>
+        </div>
     </div>
 
     <div class="flex flex-wrap gap-3">
+        <flux:radio.group wire:model.live="status" variant="segmented" size="sm" :aria-label="__('Show')">
+            <flux:radio value="active" :label="__('Active')" />
+            <flux:radio value="archived" :label="__('Archived (:count)', ['count' => $this->archivedCount])" data-test="show-archived" />
+        </flux:radio.group>
         <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :placeholder="__('Search clients')" class="max-w-sm" />
         @if ($this->teamCoaches->count() > 1)
             <flux:select wire:model.live="coachFilter" class="max-w-56" :aria-label="__('Filter by coach')">
@@ -105,8 +156,8 @@ new #[Title('Clients')] class extends Component {
     @if ($this->clients->isEmpty())
         <flux:card class="flex flex-col items-center gap-3 py-12 text-center">
             <flux:icon.users class="size-10 text-zinc-400" />
-            <flux:heading>{{ $search ? __('No clients match your search') : __('No clients yet') }}</flux:heading>
-            @unless ($search)
+            <flux:heading>{{ $search ? __('No clients match your search') : ($status === 'archived' ? __('No archived clients') : __('No clients yet')) }}</flux:heading>
+            @unless ($search || $status === 'archived')
                 <flux:text>{{ __('Add your first client to start programming their training.') }}</flux:text>
             @endunless
         </flux:card>
@@ -133,7 +184,9 @@ new #[Title('Clients')] class extends Component {
                                     <span class="font-medium text-zinc-900 hover:underline dark:text-white">{{ $client->name }}</span>
                                     <span class="text-xs text-zinc-500">{{ $client->email }}</span>
                                 </div>
-                                @if ($client->isInPersonOnly())
+                                @if ($client->isArchived())
+                                    <flux:badge size="sm" color="zinc">{{ __('Archived :date', ['date' => $client->archived_at->translatedFormat('j M')]) }}</flux:badge>
+                                @elseif ($client->isInPersonOnly())
                                     <flux:badge size="sm" color="zinc">{{ __('In person') }}</flux:badge>
                                 @elseif (! $client->hasAcceptedInvitation())
                                     <flux:badge size="sm" color="amber">{{ __('Invited') }}</flux:badge>
@@ -189,6 +242,35 @@ new #[Title('Clients')] class extends Component {
                     <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
                 </flux:modal.close>
                 <flux:button type="submit" variant="primary" data-test="save-client-button">{{ __('Add client') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
+
+    <flux:modal name="archive-settings" class="md:w-[28rem]">
+        <form wire:submit="saveArchiving" class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Archiving') }}</flux:heading>
+                <flux:text class="mt-2">{{ __('Archived clients keep all their history, leave your lists and inbox, and stop counting toward your bill from the next month.') }}</flux:text>
+            </div>
+
+            <flux:select wire:model="autoArchiveDays" :label="__('Archive my clients automatically')" :description="__('After this long with no sign-in and no completed session.')" data-test="auto-archive-days">
+                <flux:select.option value="">{{ __('Never') }}</flux:select.option>
+                @foreach ($this::AUTO_ARCHIVE_OPTIONS as $days)
+                    <flux:select.option :value="$days">{{ __('After :days days', ['days' => $days]) }}</flux:select.option>
+                @endforeach
+            </flux:select>
+
+            <flux:radio.group wire:model="archivedClientAccess" :label="__('By default, archived clients')">
+                @foreach (\App\Models\User::ARCHIVED_ACCESS as $value => $label)
+                    <flux:radio :value="$value" :label="__($label)" />
+                @endforeach
+            </flux:radio.group>
+
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="primary" data-test="save-archiving">{{ __('Save') }}</flux:button>
             </div>
         </form>
     </flux:modal>

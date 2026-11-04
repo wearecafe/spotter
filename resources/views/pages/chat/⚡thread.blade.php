@@ -108,6 +108,9 @@ new class extends Component {
 
     public function send(Chat $chat): void
     {
+        // An archived client's conversation stays readable on both sides, but closed.
+        abort_if($this->client->fresh()?->isArchived(), 403);
+
         $this->body = trim($this->body);
 
         $this->validate([
@@ -269,6 +272,13 @@ new class extends Component {
         </div>
     </div>
 
+    @if ($client->isArchived())
+        <div class="border-t border-zinc-200 pt-3 dark:border-zinc-700" data-test="archived-thread">
+            <flux:text size="sm">{{ $this->viewerIsClient()
+                ? __('Your coaching is archived, so this conversation is read-only.')
+                : __(':name is archived, so this conversation is read-only. Unarchive them to message again.', ['name' => str($client->name)->before(' ')]) }}</flux:text>
+        </div>
+    @else
     <form
         wire:submit="send"
         x-on:keydown.enter="if ($event.target.tagName === 'TEXTAREA' && ! $event.shiftKey && ! $event.isComposing && ! window.matchMedia('(pointer: coarse)').matches) { $event.preventDefault(); $wire.send() }"
@@ -303,4 +313,5 @@ new class extends Component {
         <flux:error name="photos" />
         <flux:error name="photos.*" />
     </form>
+    @endif
 </div>

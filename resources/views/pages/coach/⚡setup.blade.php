@@ -81,7 +81,7 @@ new #[Title('Set up Spotter')] class extends Component {
     public function pendingClients()
     {
         // In-person clients don't use the app, so there's no invite to send them.
-        return $this->coach->clients()->whereNull('invitation_accepted_at')->where('in_person', false)->orderBy('name')->get();
+        return $this->coach->clients()->whereNull('archived_at')->whereNull('invitation_accepted_at')->where('in_person', false)->orderBy('name')->get();
     }
 
     #[Computed]

@@ -44,6 +44,7 @@ new #[Layout('layouts::invite')] #[Title('Join your coach')] class extends Compo
             ->where('role', Role::Client)
             ->where('invitation_token', $this->token)
             ->whereNull('invitation_accepted_at')
+            ->whereNull('archived_at') // an archived client's invite waits until they're unarchived
             ->with('coach')
             ->firstOrFail();
     }

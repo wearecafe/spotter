@@ -4,6 +4,7 @@ use App\Enums\Role;
 use App\Models\StaffAuditLog;
 use App\Models\User;
 use App\Services\Chat;
+use App\Services\ClientArchive;
 use App\Services\InboxFeed;
 use App\Support\Demo;
 use Illuminate\Support\Facades\Artisan;
@@ -21,6 +22,18 @@ Artisan::command('inbox:scan-missed', function (InboxFeed $feed) {
 })->purpose('Add Coach Inbox items for clients who missed two or more sessions this week');
 
 Schedule::command('inbox:scan-missed')->dailyAt('06:00');
+
+Artisan::command('clients:auto-archive', function (ClientArchive $archive) {
+    $archived = 0;
+
+    User::query()->where('role', Role::Coach)->whereNotNull('auto_archive_days')->each(function (User $coach) use ($archive, &$archived) {
+        $archived += $archive->autoArchive($coach);
+    });
+
+    $this->info("Archived {$archived} inactive clients.");
+})->purpose('Archive clients inactive for longer than their coach’s auto-archive window');
+
+Schedule::command('clients:auto-archive')->dailyAt('05:30')->withoutOverlapping();
 
 Artisan::command('messages:notify-unread', function (Chat $chat) {
     $this->info('Emailed '.$chat->notifyUnread().' people about unread messages.');

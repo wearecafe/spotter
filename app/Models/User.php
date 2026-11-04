@@ -27,6 +27,11 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property int|null $coach_id
  * @property string|null $goal
  * @property bool $in_person
+ * @property Carbon|null $archived_at
+ * @property string|null $archived_reason
+ * @property string|null $archived_access
+ * @property int|null $auto_archive_days
+ * @property string $archived_client_access
  * @property string|null $coach_notes
  * @property string|null $invitation_token
  * @property Carbon|null $invitation_accepted_at
@@ -61,8 +66,8 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
     'name', 'email', 'password', 'role', 'coach_id', 'goal', 'in_person', 'coach_notes', 'invitation_token', 'invitation_accepted_at', 'invited_at',
     'locale', 'business_name', 'currency', 'coaching_languages', 'client_count_band', 'brand_color', 'logo_path', 'subdomain',
     'import_source', 'contract_months_left', 'onboarded_at',
-    'calorie_target', 'protein_target', 'carbs_target', 'fat_target',
-    // team_id, team_role and is_staff are deliberately not mass assignable.
+    'calorie_target', 'protein_target', 'carbs_target', 'fat_target', 'auto_archive_days', 'archived_client_access',
+    // team_id, team_role, is_staff and the archived_* columns are deliberately not mass assignable.
 ])]
 #[Hidden(['password', 'invitation_token', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements HasLocalePreference
@@ -82,7 +87,11 @@ class User extends Authenticatable implements HasLocalePreference
         'brand_color' => '#0A7A55',
         'contract_months_left' => 0,
         'in_person' => false,
+        'archived_client_access' => 'read_only',
     ];
+
+    /** What an archived client can still do: look back at their history, or nothing at all. */
+    public const ARCHIVED_ACCESS = ['read_only' => 'Can view their history', 'locked' => 'Can’t sign in'];
 
     /**
      * Get the attributes that should be cast.
@@ -101,6 +110,8 @@ class User extends Authenticatable implements HasLocalePreference
             'is_staff' => 'boolean',
             'in_person' => 'boolean',
             'last_seen_at' => 'datetime',
+            'archived_at' => 'datetime',
+            'auto_archive_days' => 'integer',
         ];
     }
 
@@ -161,13 +172,48 @@ class User extends Authenticatable implements HasLocalePreference
      *
      * @return Builder<User>
      */
-    public function visibleClients(): Builder
+    public function visibleClients(bool $withArchived = false): Builder
     {
-        if ($this->isTeamAdmin() && $this->team_id) {
-            return User::query()->where('role', Role::Client)->where('team_id', $this->team_id);
-        }
+        $query = $this->isTeamAdmin() && $this->team_id
+            ? User::query()->where('role', Role::Client)->where('team_id', $this->team_id)
+            : User::query()->where('role', Role::Client)->where('coach_id', $this->id);
 
-        return User::query()->where('role', Role::Client)->where('coach_id', $this->id);
+        return $query->when(! $withArchived, fn (Builder $q) => $q->whereNull('archived_at'));
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->archived_at !== null;
+    }
+
+    /**
+     * An archived client who may still sign in to look back at their history, but change nothing.
+     */
+    public function isReadOnlyClient(): bool
+    {
+        return $this->isClient() && $this->isArchived() && $this->archived_access !== 'locked';
+    }
+
+    /**
+     * Clients that count toward this month's bill: active ones, plus any archived during the month,
+     * since they were active in it. Archiving takes a client off the bill from the next month.
+     *
+     * @param  Builder<User>  $query
+     */
+    public function scopeBillable(Builder $query, ?\DateTimeInterface $month = null): void
+    {
+        $start = Carbon::parse($month ?? now())->startOfMonth();
+
+        $query->where('role', Role::Client)
+            ->where(fn (Builder $q) => $q->whereNull('archived_at')->orWhere('archived_at', '>=', $start));
+    }
+
+    /**
+     * @param  Builder<User>  $query
+     */
+    public function scopeNotArchived(Builder $query): void
+    {
+        $query->whereNull('archived_at');
     }
 
     /**

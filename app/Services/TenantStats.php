@@ -38,6 +38,7 @@ class TenantStats
             ->withCount([
                 'coaches',
                 'clients',
+                'clients as billable_clients_count' => fn ($q) => $q->billable(),
                 'clients as active_clients_count' => fn ($q) => $q->where('last_seen_at', '>=', now()->subDays(7)),
             ])
             ->addSelect(['last_active_at' => User::query()->selectRaw('max(last_seen_at)')->whereColumn('team_id', 'teams.id')]);
@@ -77,7 +78,7 @@ class TenantStats
             'clients' => $realUsers()->where('role', Role::Client)->count(),
             'active_clients_7d' => $realUsers()->where('role', Role::Client)->where('last_seen_at', '>=', now()->subDays(7))->count(),
             'workouts_7d' => Workout::whereIn('client_id', $realUsers()->select('id'))->where('completed_at', '>=', now()->subDays(7))->count(),
-            'mrr_estimate' => $teams->sum(fn (Team $t) => $this->monthlyEstimate($t, $t->clients_count)),
+            'mrr_estimate' => $teams->sum(fn (Team $t) => $this->monthlyEstimate($t, $t->billable_clients_count)),
         ];
     }
 
@@ -92,6 +93,9 @@ class TenantStats
 
         return [
             'clients' => $clientIds->count(),
+            // Archived clients stop counting toward the bill from the month after they're archived.
+            'billable_clients' => User::whereIn('id', $clientIds)->billable()->count(),
+            'archived_clients' => User::whereIn('id', $clientIds)->whereNotNull('archived_at')->count(),
             'clients_pending_invite' => User::whereIn('id', $clientIds)->whereNull('invitation_accepted_at')->count(),
             'active_clients_7d' => User::whereIn('id', $clientIds)->where('last_seen_at', '>=', now()->subDays(7))->count(),
             'workouts_completed' => Workout::whereIn('client_id', $clientIds)->where('completed_at', '>=', $since)->count(),

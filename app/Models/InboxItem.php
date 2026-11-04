@@ -85,7 +85,7 @@ class InboxItem extends Model
     }
 
     /**
-     * Items the coach should see now: open, or snoozed until a time that has passed.
+     * Items the coach should see now: open, or snoozed until a time that has passed, for clients who aren't archived.
      *
      * @param  Builder<InboxItem>  $query
      */
@@ -93,7 +93,9 @@ class InboxItem extends Model
     {
         $query->where(fn (Builder $q) => $q
             ->where('status', 'open')
-            ->orWhere(fn (Builder $q) => $q->where('status', 'snoozed')->where('snoozed_until', '<=', now())));
+            ->orWhere(fn (Builder $q) => $q->where('status', 'snoozed')->where('snoozed_until', '<=', now())))
+            // Archived clients' items wait, untouched, until the client is unarchived.
+            ->whereHas('client', fn (Builder $q) => $q->whereNull('archived_at'));
     }
 
     /**

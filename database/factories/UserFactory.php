@@ -83,4 +83,16 @@ class UserFactory extends Factory
             'invitation_accepted_at' => null,
         ]);
     }
+
+    /**
+     * A client their coach has archived.
+     */
+    public function archived(string $access = 'read_only', mixed $at = null): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'archived_at' => $at ?? now(),
+            'archived_reason' => 'coach',
+            'archived_access' => $access,
+        ]);
+    }
 }

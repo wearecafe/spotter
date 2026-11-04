@@ -164,7 +164,7 @@ new #[Layout('layouts::admin')] #[Title('Tenant')] class extends Component {
 
     <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
         @foreach ([
-            [__('Clients'), $this->stats['clients'], trans_choice(':count invite pending|:count invites pending', $this->stats['clients_pending_invite'])],
+            [__('Clients'), $this->stats['clients'], trans_choice(':count invite pending|:count invites pending', $this->stats['clients_pending_invite']).($this->stats['archived_clients'] ? ' · '.trans_choice(':count archived|:count archived', $this->stats['archived_clients']) : '')],
             [__('Active clients'), $this->stats['active_clients_7d'], __('last 7 days')],
             [__('Workouts completed'), $this->stats['workouts_completed'], __('last 30 days')],
             [__('Check-ins'), $this->stats['check_ins'], __('last 30 days')],
@@ -173,7 +173,7 @@ new #[Layout('layouts::admin')] #[Title('Tenant')] class extends Component {
             [__('Inbox drafts (AI)'), $this->stats['inbox_ai'], __('last 30 days')],
             [__('Inbox drafts (rules)'), $this->stats['inbox_rules'], __('last 30 days')],
             [__('Imports'), $this->stats['imports'], __('all time')],
-            [__('Est. monthly'), '$'.number_format(app(\App\Services\TenantStats::class)->monthlyEstimate($team, $this->stats['clients']), 2), __('at launch prices')],
+            [__('Est. monthly'), '$'.number_format(app(\App\Services\TenantStats::class)->monthlyEstimate($team, $this->stats['billable_clients']), 2), __('at launch prices')],
         ] as [$label, $value, $sub])
             <div class="rounded-xl border border-zinc-200 bg-white p-4">
                 <div class="text-xs font-medium uppercase tracking-wide text-zinc-500">{{ $label }}</div>
