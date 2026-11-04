@@ -107,11 +107,14 @@ class InboxFeed
      */
     public function sessionMoved(Workout $workout, CarbonInterface $from): ?InboxItem
     {
+        // Written while the client is signed in, but read by the coach: dates in the coach's language.
+        $locale = $workout->client->coach?->preferredLocale() ?? config('app.locale');
+
         return $this->add($workout->client, 'moved', $workout, __('Moved :title from :from to :to', [
             'title' => $workout->title,
-            'from' => $from->translatedFormat('D j M'),
-            'to' => $workout->scheduled_on->translatedFormat('D j M'),
-        ]));
+            'from' => $from->locale($locale)->translatedFormat('D j M'),
+            'to' => $workout->scheduled_on->locale($locale)->translatedFormat('D j M'),
+        ], $locale));
     }
 
     public function messageReceived(Message $message): ?InboxItem

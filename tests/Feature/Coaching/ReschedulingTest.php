@@ -139,4 +139,16 @@ class ReschedulingTest extends TestCase
 
         $this->assertFalse(app(Rescheduling::class)->canMove($client, $workout));
     }
+
+    public function test_moved_headline_is_in_the_coaches_language_not_the_clients(): void
+    {
+        $coach = User::factory()->create(['locale' => 'en']);
+        $client = User::factory()->clientOf($coach)->create(['locale' => 'fr']);
+        $workout = Workout::factory()->forClient($client, '2026-11-04')->create(['title' => 'Bas du corps']);
+
+        app()->setLocale('fr'); // as on the client's own request
+        app(Rescheduling::class)->move($client, $workout, '2026-11-05');
+
+        $this->assertSame('Moved Bas du corps from Wed 4 Nov to Thu 5 Nov', InboxItem::where('type', 'moved')->sole()->headline);
+    }
 }

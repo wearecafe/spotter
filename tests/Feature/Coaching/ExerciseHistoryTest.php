@@ -127,4 +127,21 @@ class ExerciseHistoryTest extends TestCase
             ->assertOk()
             ->assertSee(__('Last time: :sets', ['sets' => '3 × 5 @ 70 kg']));
     }
+
+    public function test_new_client_screens_render_in_french(): void
+    {
+        $coach = User::factory()->create();
+        $client = User::factory()->clientOf($coach)->create(['locale' => 'fr']);
+        $bench = Exercise::factory()->create();
+        $this->logSession($client, $bench, '2026-10-01', [['5', '70 kg']]);
+        $client->habits()->create(['created_by_id' => $coach->id, 'name' => 'Eau']);
+        $today = Workout::factory()->forClient($client)->create();
+        $today->items()->create(['exercise_id' => $bench->id, 'sets' => 1, 'reps' => '5']);
+
+        $this->actingAs($client)->get(route('training.workout', $today))->assertOk()
+            ->assertSee('La dernière fois : 1 × 5 @ 70 kg')
+            ->assertSee('Ajouter une note pour ton coach');
+        $this->actingAs($client)->get(route('training.progress'))->assertOk()->assertSee('Mes progrès');
+        $this->actingAs($client)->get(route('training.index'))->assertOk()->assertSee('Habitudes');
+    }
 }
