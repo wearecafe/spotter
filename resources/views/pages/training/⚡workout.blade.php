@@ -3,6 +3,7 @@
 use App\Models\FormCheck;
 use App\Models\Workout;
 use App\Services\InboxFeed;
+use App\Services\Rescheduling;
 use App\Services\TrainerSession;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
@@ -63,6 +64,40 @@ new #[Title('Workout')] class extends Component {
     public function lastTimes(): array
     {
         return app(TrainerSession::class)->lastTime($this->workout);
+    }
+
+    public string $moveTo = '';
+
+    /**
+     * Days this session can move to (today to the end of its week), if the client may move it.
+     *
+     * @return \Illuminate\Support\Collection<int, \Carbon\CarbonInterface>
+     */
+    #[Computed]
+    public function moveOptions()
+    {
+        $rescheduling = app(Rescheduling::class);
+
+        return $rescheduling->canMove(Auth::user(), $this->workout) ? $rescheduling->options($this->workout) : collect();
+    }
+
+    public function move(Rescheduling $rescheduling): void
+    {
+        $this->validate(['moveTo' => ['required', 'date']], attributes: ['moveTo' => __('day')]);
+
+        try {
+            $rescheduling->move(Auth::user(), $this->workout, $this->moveTo);
+        } catch (\InvalidArgumentException) {
+            $this->addError('moveTo', __('That session can’t move to that day.'));
+
+            return;
+        }
+
+        $this->workout->refresh();
+        $this->moveTo = '';
+        unset($this->moveOptions);
+        Flux::modal('move-session')->close();
+        Flux::toast(variant: 'success', text: __('Moved to :day. Your coach has been told.', ['day' => $this->workout->scheduled_on->translatedFormat('l j M')]));
     }
 
     public function saveProgress(bool $notify = true): void
@@ -172,11 +207,42 @@ new #[Title('Workout')] class extends Component {
             <flux:breadcrumbs.item :href="route('training.index')" wire:navigate>{{ __('My workouts') }}</flux:breadcrumbs.item>
             <flux:breadcrumbs.item>{{ $workout->scheduled_on?->translatedFormat('D j M') }}</flux:breadcrumbs.item>
         </flux:breadcrumbs>
-        <flux:heading size="xl" level="1" class="mt-2">{{ $workout->title }}</flux:heading>
-        @if ($workout->week)
-            <flux:text class="mt-1">{{ __('Week :week', ['week' => $workout->week]) }}</flux:text>
+        <div class="mt-2 flex flex-wrap items-start justify-between gap-3">
+            <flux:heading size="xl" level="1">{{ $workout->title }}</flux:heading>
+            @if ($this->moveOptions->isNotEmpty())
+                <flux:modal.trigger name="move-session">
+                    <flux:button size="sm" icon="calendar-days" data-test="move-session">{{ __('Move to another day') }}</flux:button>
+                </flux:modal.trigger>
+            @endif
+        </div>
+        @if ($workout->week || $workout->moved_from)
+            <flux:text class="mt-1">
+                @if ($workout->week){{ __('Week :week', ['week' => $workout->week]) }}@endif
+                @if ($workout->week && $workout->moved_from) · @endif
+                @if ($workout->moved_from){{ __('Moved from :day', ['day' => $workout->moved_from->translatedFormat('D j M')]) }}@endif
+            </flux:text>
         @endif
     </div>
+
+    @if ($this->moveOptions->isNotEmpty())
+        <flux:modal name="move-session" class="md:w-96">
+            <form wire:submit="move" class="flex flex-col gap-5">
+                <div>
+                    <flux:heading size="lg">{{ __('Move this session') }}</flux:heading>
+                    <flux:text class="mt-1">{{ __('Pick another day this week. Your coach will see that you moved it.') }}</flux:text>
+                </div>
+                <flux:radio.group wire:model="moveTo" :label="__('New day')">
+                    @foreach ($this->moveOptions as $day)
+                        <flux:radio :value="$day->toDateString()" :label="$day->isToday() ? __('Today') : ($day->isTomorrow() ? __('Tomorrow') : $day->translatedFormat('l j M'))" />
+                    @endforeach
+                </flux:radio.group>
+                <div class="flex justify-end gap-2">
+                    <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
+                    <flux:button type="submit" variant="primary" data-test="confirm-move">{{ __('Move') }}</flux:button>
+                </div>
+            </form>
+        </flux:modal>
+    @endif
 
     @if ($workout->instructions)
         <flux:callout icon="chat-bubble-left-ellipsis">

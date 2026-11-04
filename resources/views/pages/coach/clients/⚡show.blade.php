@@ -46,6 +46,7 @@ new #[Title('Client')] class extends Component {
         $this->client = $client;
         $this->goal = (string) $client->goal;
         $this->coachNotes = (string) $client->coach_notes;
+        $this->canReschedule = $client->can_reschedule;
         $this->scheduledOn = today()->toDateString();
         $this->archiveAccess = Auth::user()->archived_client_access ?: 'read_only';
         $this->programStart = today()->startOfWeek()->addWeek()->toDateString();
@@ -207,6 +208,13 @@ new #[Title('Client')] class extends Component {
         $this->client->update(['in_person' => $inPerson]);
     }
 
+    public bool $canReschedule = true;
+
+    public function updatedCanReschedule(): void
+    {
+        $this->client->update(['can_reschedule' => $this->canReschedule]);
+    }
+
     public string $archiveAccess = 'read_only';
 
     /**
@@ -366,7 +374,12 @@ new #[Title('Client')] class extends Component {
                             </div>
                             <div>
                                 <a href="{{ route('coach.workouts.edit', $workout) }}" wire:navigate class="font-medium text-zinc-900 hover:underline dark:text-white">{{ $workout->title }}</a>
-                                <flux:text size="sm">{{ trans_choice(':count exercise|:count exercises', $workout->items_count) }}</flux:text>
+                                <flux:text size="sm">
+                                    {{ trans_choice(':count exercise|:count exercises', $workout->items_count) }}
+                                    @if ($workout->moved_from)
+                                        · {{ __('moved from :day', ['day' => $workout->moved_from->translatedFormat('D j M')]) }}
+                                    @endif
+                                </flux:text>
                             </div>
                         </div>
                         <div class="flex gap-1">
@@ -429,6 +442,8 @@ new #[Title('Client')] class extends Component {
                 <form wire:submit="saveProfile" class="flex flex-col gap-4">
                     <flux:heading size="lg">{{ __('Profile') }}</flux:heading>
                     <flux:input wire:model="goal" :label="__('Goal')" />
+                    <flux:switch wire:model.live="canReschedule"
+                        :label="__('Can move sessions')" :description="__('Lets them move a session to another day in the same week. You’ll see it in your inbox.')" data-test="can-reschedule" />
                     <flux:textarea wire:model="coachNotes" :label="__('Private notes')" :description="__('Only you can see these.')" rows="6" />
                     <flux:button type="submit" class="self-start">{{ __('Save') }}</flux:button>
                 </form>

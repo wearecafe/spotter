@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\DB;
  * @property string $title
  * @property string|null $instructions
  * @property CarbonInterface|null $scheduled_on
+ * @property CarbonInterface|null $moved_from
  * @property CarbonInterface|null $completed_at
  * @property string|null $client_feedback
  * @property int|null $program_id
@@ -32,7 +33,7 @@ use Illuminate\Support\Facades\DB;
  * @property int|null $logged_by_id
  * @property string|null $session_notes
  */
-#[Fillable(['coach_id', 'client_id', 'template_id', 'title', 'instructions', 'scheduled_on', 'completed_at', 'client_feedback', 'program_id', 'week', 'day', 'reported_at', 'program_day_id', 'customized_at', 'logged_by_id', 'session_notes'])]
+#[Fillable(['coach_id', 'client_id', 'template_id', 'title', 'instructions', 'scheduled_on', 'moved_from', 'completed_at', 'client_feedback', 'program_id', 'week', 'day', 'reported_at', 'program_day_id', 'customized_at', 'logged_by_id', 'session_notes'])]
 class Workout extends Model
 {
     /** @use HasFactory<WorkoutFactory> */
@@ -42,6 +43,7 @@ class Workout extends Model
     {
         return [
             'scheduled_on' => 'date',
+            'moved_from' => 'date',
             'completed_at' => 'datetime',
             'reported_at' => 'datetime',
             'customized_at' => 'datetime',
@@ -159,7 +161,7 @@ class Workout extends Model
     public function assignTo(User $client, DateTimeInterface|string $date): Workout
     {
         return DB::transaction(function () use ($client, $date) {
-            $copy = $this->replicate(['client_id', 'scheduled_on', 'completed_at', 'client_feedback', 'reported_at', 'template_id', 'program_id', 'week', 'day', 'program_day_id', 'customized_at'])->unsetRelations();
+            $copy = $this->replicate(['client_id', 'scheduled_on', 'moved_from', 'completed_at', 'client_feedback', 'reported_at', 'template_id', 'program_id', 'week', 'day', 'program_day_id', 'customized_at'])->unsetRelations();
             $copy->client_id = $client->id;
             // The client's own coach owns the copy, even when a teammate's template was used.
             $copy->coach_id = $client->coach_id ?? $this->coach_id;

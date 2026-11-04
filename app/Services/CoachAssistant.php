@@ -35,6 +35,11 @@ class CoachAssistant
     {
         $context = $this->context($item);
 
+        // Nothing to write about a moved session: it's a heads-up for the coach.
+        if ($item->type === 'moved') {
+            return $this->draftWithRules($item, $context) + ['by' => 'rules'];
+        }
+
         // The demo gym's drafts use Claude only while it's being built, never per visitor.
         if (config('services.anthropic.key') && Demo::mayUseAi($item->coach?->team_id)) {
             try {
@@ -78,7 +83,7 @@ class CoachAssistant
             $context['form_check'] = $subject->loadMissing('workoutExercise.exercise');
         }
 
-        if ($subject instanceof Workout) {
+        if ($subject instanceof Workout && $item->type !== 'moved') {
             $context['workout'] = $subject->loadMissing('items.exercise');
         }
 
@@ -382,6 +387,10 @@ class CoachAssistant
                 $summary = __('Flagged pain on :exercise in :title.', ['exercise' => $exercise, 'title' => $p->workout->title])
                     .($p->client_note ? ' “'.Str::limit($p->client_note, 200).'”' : '');
                 $reply = $t('Thanks for flagging that, :name. Don’t push through pain on :exercise. Where exactly do you feel it, and does it hurt outside the gym too? I’ll adjust it in your next session.', ['name' => $name, 'exercise' => $exercise]);
+                break;
+            case 'moved':
+                $summary = $item->headline.'.';
+                $reply = '';
                 break;
             case 'pr':
                 $summary = (string) $item->summary;

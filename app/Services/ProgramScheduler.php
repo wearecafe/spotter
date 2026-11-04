@@ -98,7 +98,8 @@ class ProgramScheduler
                     'day' => $day->position,
                     'title' => $day->title,
                     'instructions' => $day->notes,
-                    'scheduled_on' => $date,
+                    // A session the client moved to another day stays on the day they chose.
+                    'scheduled_on' => $session->moved_from ? $session->scheduled_on : $date,
                 ])->save();
 
                 $this->syncItems($session, $blueprint, $plan[$week] ?? []);

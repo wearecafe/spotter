@@ -27,6 +27,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property int|null $coach_id
  * @property string|null $goal
  * @property bool $in_person
+ * @property bool $can_reschedule
  * @property Carbon|null $archived_at
  * @property string|null $archived_reason
  * @property string|null $archived_access
@@ -64,7 +65,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $updated_at
  */
 #[Fillable([
-    'name', 'email', 'password', 'role', 'coach_id', 'goal', 'in_person', 'coach_notes', 'invitation_token', 'invitation_accepted_at', 'invited_at',
+    'name', 'email', 'password', 'role', 'coach_id', 'goal', 'in_person', 'can_reschedule', 'coach_notes', 'invitation_token', 'invitation_accepted_at', 'invited_at',
     'locale', 'business_name', 'currency', 'coaching_languages', 'client_count_band', 'brand_color', 'logo_path', 'subdomain',
     'import_source', 'contract_months_left', 'onboarded_at',
     'calorie_target', 'protein_target', 'carbs_target', 'fat_target', 'auto_archive_days', 'archived_client_access', 'history_metric',
@@ -88,6 +89,7 @@ class User extends Authenticatable implements HasLocalePreference
         'brand_color' => '#0A7A55',
         'contract_months_left' => 0,
         'in_person' => false,
+        'can_reschedule' => true,
         'archived_client_access' => 'read_only',
         'history_metric' => 'heaviest',
     ];
@@ -111,6 +113,7 @@ class User extends Authenticatable implements HasLocalePreference
             'onboarded_at' => 'datetime',
             'is_staff' => 'boolean',
             'in_person' => 'boolean',
+            'can_reschedule' => 'boolean',
             'last_seen_at' => 'datetime',
             'archived_at' => 'datetime',
             'auto_archive_days' => 'integer',

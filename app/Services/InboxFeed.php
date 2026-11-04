@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutExercise;
 use App\Support\Load;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -83,6 +84,18 @@ class InboxFeed
         $exercise = $item->exercise->name;
 
         return $this->add($client, 'pain', $item, __('Pain on :exercise', ['exercise' => $exercise]), $item->client_note);
+    }
+
+    /**
+     * The client moved a session to another day. Low priority: it's for the coach's awareness.
+     */
+    public function sessionMoved(Workout $workout, CarbonInterface $from): ?InboxItem
+    {
+        return $this->add($workout->client, 'moved', $workout, __('Moved :title from :from to :to', [
+            'title' => $workout->title,
+            'from' => $from->translatedFormat('D j M'),
+            'to' => $workout->scheduled_on->translatedFormat('D j M'),
+        ]));
     }
 
     public function messageReceived(Message $message): ?InboxItem
