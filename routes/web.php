@@ -51,6 +51,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Older links to a client's conversation open it in Messages.
         Route::get('clients/{client}/messages', fn (string $client) => redirect()->route('coach.messages', ['client' => $client]))->name('clients.messages');
         Route::livewire('clients/{client}/nutrition', 'pages::coach.clients.nutrition')->name('clients.nutrition');
+        Route::livewire('clients/{client}/progress', 'pages::coach.clients.progress')->name('clients.progress');
         Route::livewire('programs/{program}', 'pages::coach.program')->name('programs.show');
         Route::livewire('imports/{import}', 'pages::coach.import')->name('imports.show');
         Route::livewire('exercises', 'pages::coach.exercises')->name('exercises');
@@ -63,6 +64,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::livewire('check-in', 'pages::training.check-in')->name('check-in');
         Route::livewire('messages', 'pages::training.messages')->name('messages');
         Route::livewire('nutrition', 'pages::training.nutrition')->name('nutrition');
+        Route::livewire('progress', 'pages::training.progress')->name('progress');
         Route::livewire('{workout}', 'pages::training.workout')->whereNumber('workout')->name('workout');
     });
 

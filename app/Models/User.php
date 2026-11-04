@@ -32,6 +32,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string|null $archived_access
  * @property int|null $auto_archive_days
  * @property string $archived_client_access
+ * @property string $history_metric
  * @property string|null $coach_notes
  * @property string|null $invitation_token
  * @property Carbon|null $invitation_accepted_at
@@ -66,7 +67,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
     'name', 'email', 'password', 'role', 'coach_id', 'goal', 'in_person', 'coach_notes', 'invitation_token', 'invitation_accepted_at', 'invited_at',
     'locale', 'business_name', 'currency', 'coaching_languages', 'client_count_band', 'brand_color', 'logo_path', 'subdomain',
     'import_source', 'contract_months_left', 'onboarded_at',
-    'calorie_target', 'protein_target', 'carbs_target', 'fat_target', 'auto_archive_days', 'archived_client_access',
+    'calorie_target', 'protein_target', 'carbs_target', 'fat_target', 'auto_archive_days', 'archived_client_access', 'history_metric',
     // team_id, team_role, is_staff and the archived_* columns are deliberately not mass assignable.
 ])]
 #[Hidden(['password', 'invitation_token', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
@@ -88,6 +89,7 @@ class User extends Authenticatable implements HasLocalePreference
         'contract_months_left' => 0,
         'in_person' => false,
         'archived_client_access' => 'read_only',
+        'history_metric' => 'heaviest',
     ];
 
     /** What an archived client can still do: look back at their history, or nothing at all. */

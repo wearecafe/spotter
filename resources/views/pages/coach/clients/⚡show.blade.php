@@ -265,6 +265,7 @@ new #[Title('Client')] class extends Component {
             @unless ($client->isArchived())
                 <flux:button size="sm" variant="primary" icon="play" wire:click="runSession" data-test="run-session">{{ __('Run session') }}</flux:button>
             @endunless
+            <flux:button size="sm" icon="chart-bar" :href="route('coach.clients.progress', $client)" wire:navigate data-test="progress-link">{{ __('Progress') }}</flux:button>
             <flux:button size="sm" icon="chart-pie" :href="route('coach.clients.nutrition', $client)" wire:navigate>{{ __('Nutrition') }}</flux:button>
             <flux:button size="sm" icon="chat-bubble-left-right" :href="route('coach.clients.messages', $client)" wire:navigate>{{ __('Messages') }}</flux:button>
             @php($compliance = $client->complianceRate())

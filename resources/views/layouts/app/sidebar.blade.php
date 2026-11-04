@@ -50,6 +50,9 @@
                         <flux:sidebar.item icon="calendar-days" :href="route('training.index')" :current="request()->routeIs('training.index') || request()->routeIs('training.workout')" wire:navigate>
                             {{ __('My workouts') }}
                         </flux:sidebar.item>
+                        <flux:sidebar.item icon="chart-bar" :href="route('training.progress')" :current="request()->routeIs('training.progress')" wire:navigate>
+                            {{ __('Progress') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="clipboard-document-check" :href="route('training.check-in')" :current="request()->routeIs('training.check-in')" wire:navigate>
                             {{ __('Check-in') }}
                         </flux:sidebar.item>

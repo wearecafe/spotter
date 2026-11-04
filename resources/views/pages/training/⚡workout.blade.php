@@ -3,9 +3,11 @@
 use App\Models\FormCheck;
 use App\Models\Workout;
 use App\Services\InboxFeed;
+use App\Services\TrainerSession;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -46,6 +48,17 @@ new #[Title('Workout')] class extends Component {
         foreach ($this->workout->items as $item) {
             $this->logs[$item->id] = $item->setsForLogging();
         }
+    }
+
+    /**
+     * What the client did the last time they did each exercise, e.g. "3 × 5 @ 75 kg".
+     *
+     * @return array<int, string> keyed by exercise id
+     */
+    #[Computed]
+    public function lastTimes(): array
+    {
+        return app(TrainerSession::class)->lastTime($this->workout);
     }
 
     public function saveProgress(bool $notify = true): void
@@ -181,6 +194,9 @@ new #[Title('Workout')] class extends Component {
                 <div>
                     <div class="font-display text-lg font-bold text-zinc-900 dark:text-white">{{ $index + 1 }}. {{ $item->exercise->name }}</div>
                     <flux:text>{{ $item->prescription() }}</flux:text>
+                    @if ($last = $this->lastTimes[$item->exercise_id] ?? null)
+                        <flux:text size="sm" class="mt-0.5 text-zinc-500" data-test="last-time">{{ __('Last time: :sets', ['sets' => $last]) }}</flux:text>
+                    @endif
                     @if ($item->notes)
                         <flux:text size="sm" class="mt-1 italic">{{ $item->notes }}</flux:text>
                     @endif
