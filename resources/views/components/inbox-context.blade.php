@@ -48,7 +48,15 @@
             <tbody>
                 @foreach ($subject->items as $row)
                     <tr class="border-t border-zinc-100 dark:border-zinc-700">
-                        <td class="py-2 pe-3 font-medium text-zinc-900 dark:text-white">{{ $row->exercise->name }}</td>
+                        <td class="py-2 pe-3 font-medium text-zinc-900 dark:text-white">
+                            {{ $row->exercise->name }}
+                            @if ($row->pain)
+                                <flux:badge size="sm" color="red" class="ms-1">{{ __('Pain') }}</flux:badge>
+                            @endif
+                            @if ($row->client_note)
+                                <div class="text-xs font-normal italic text-zinc-500">“{{ $row->client_note }}”</div>
+                            @endif
+                        </td>
                         <td class="py-2 pe-3 text-zinc-600 dark:text-zinc-300">{{ $row->prescription() }}</td>
                         <td class="py-2 tabular-nums text-zinc-600 dark:text-zinc-300">
                             {{ collect($row->logged_sets ?? [])->filter(fn ($s) => $s['done'] ?? false)->map(fn ($s) => ($s['reps'] ?? '—').(($s['load'] ?? null) ? ' @ '.$s['load'] : '').(($s['rpe'] ?? null) ? ' · '.$s['rpe'] : ''))->implode(', ') ?: '—' }}
@@ -59,6 +67,17 @@
         </table>
     </div>
     <a href="{{ route('coach.workouts.edit', $subject) }}" wire:navigate class="text-sm font-semibold text-brand hover:underline dark:text-lime">{{ __('Open workout') }}</a>
+@elseif ($subject instanceof \App\Models\WorkoutExercise && $item->type === 'pain')
+    @php($subject->loadMissing('exercise', 'workout'))
+    <div class="flex flex-col gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm dark:border-red-500/30 dark:bg-red-500/10" data-test="pain-context">
+        <div class="font-semibold text-zinc-900 dark:text-white">{{ $subject->exercise->name }} · {{ $subject->workout->title }}, {{ $subject->workout->scheduled_on?->translatedFormat('D j M') }}</div>
+        <div class="text-zinc-700 dark:text-zinc-300">{{ __('Planned') }}: {{ $subject->prescription() }}</div>
+        <div class="text-zinc-700 dark:text-zinc-300">{{ __('Logged') }}: {{ app(\App\Services\TrainerSession::class)->summary($subject->logged_sets ?? []) ?? __('nothing yet') }}</div>
+        @if ($subject->client_note)
+            <blockquote class="border-s-4 border-red-200 ps-3 text-[15px] text-zinc-800 dark:border-red-500/40 dark:text-zinc-200">{{ $subject->client_note }}</blockquote>
+        @endif
+    </div>
+    <a href="{{ route('coach.workouts.edit', $subject->workout) }}" wire:navigate class="text-sm font-semibold text-brand hover:underline dark:text-lime">{{ __('Open workout') }}</a>
 @elseif ($subject instanceof \App\Models\Message)
     <a href="{{ route('coach.clients.messages', $item->client) }}" wire:navigate class="text-sm font-semibold text-brand hover:underline dark:text-lime">{{ __('Open conversation') }}</a>
 @endif

@@ -24,6 +24,9 @@ new #[Title('Workout')] class extends Component {
 
     public string $feedback = '';
 
+    /** @var array<int, array{note: string, pain: bool}> the client's note and pain flag, keyed by workout_exercise id */
+    public array $notes = [];
+
     /** @var array<int, mixed> form-check uploads keyed by workout_exercise id */
     public array $videos = [];
 
@@ -47,6 +50,7 @@ new #[Title('Workout')] class extends Component {
 
         foreach ($this->workout->items as $item) {
             $this->logs[$item->id] = $item->setsForLogging();
+            $this->notes[$item->id] = ['note' => (string) $item->client_note, 'pain' => $item->pain];
         }
     }
 
@@ -69,7 +73,9 @@ new #[Title('Workout')] class extends Component {
             'logs.*.*.rpe' => ['nullable', 'in:'.implode(',', self::RPE_OPTIONS)],
             'logs.*.*.done' => ['boolean'],
             'feedback' => ['nullable', 'string', 'max:2000'],
-        ]);
+            'notes.*.note' => ['nullable', 'string', 'max:500'],
+            'notes.*.pain' => ['boolean'],
+        ], attributes: ['notes.*.note' => __('note')]);
 
         foreach ($this->workout->items as $item) {
             $sets = collect($this->logs[$item->id] ?? [])
@@ -82,7 +88,16 @@ new #[Title('Workout')] class extends Component {
                 ->values()
                 ->all();
 
-            $item->update(['logged_sets' => $sets]);
+            $note = trim((string) ($this->notes[$item->id]['note'] ?? ''));
+            $pain = (bool) ($this->notes[$item->id]['pain'] ?? false);
+            $newlyPainful = $pain && ! $item->pain;
+
+            $item->update(['logged_sets' => $sets, 'client_note' => $note !== '' ? $note : null, 'pain' => $pain]);
+
+            // The coach hears about pain straight away, not only when the workout is finished.
+            if ($newlyPainful) {
+                app(InboxFeed::class)->painReported($item->setRelation('workout', $this->workout));
+            }
         }
 
         $this->workout->update(['client_feedback' => $this->feedback ?: null]);
@@ -237,6 +252,18 @@ new #[Title('Workout')] class extends Component {
                         </div>
                     </div>
                 @endforeach
+            </div>
+
+            <div x-data="{ open: @js(filled($notes[$item->id]['note'] ?? null) || ($notes[$item->id]['pain'] ?? false)) }" class="flex flex-col gap-2">
+                <button type="button" x-show="! open" x-on:click="open = true" class="self-start text-sm font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200" data-test="add-note">
+                    + {{ __('Add a note for your coach') }}
+                </button>
+                <div x-cloak x-show="open" class="flex flex-col gap-2">
+                    <flux:input size="sm" wire:model="notes.{{ $item->id }}.note" :aria-label="__('Note on :exercise', ['exercise' => $item->exercise->name])"
+                        :placeholder="__('e.g. Eased off the weight, my knee was sore')" maxlength="500" />
+                    <flux:checkbox wire:model="notes.{{ $item->id }}.pain" x-on:change="$wire.saveProgress(false)"
+                        :label="__('This caused pain or discomfort')" :description="__('Your coach is told right away.')" data-test="pain-flag" />
+                </div>
             </div>
         </flux:card>
 

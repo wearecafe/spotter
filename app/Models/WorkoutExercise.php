@@ -26,12 +26,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property array<int, string>|null $changed_fields
  * @property string|null $change_reason
  * @property array<int, array{reps: string|null, load: string|null, rpe?: string|null, done: bool}>|null $logged_sets
+ * @property string|null $client_note
+ * @property bool $pain
  */
-#[Fillable(['exercise_id', 'program_exercise_id', 'position', 'sets', 'reps', 'load', 'target_rpe', 'rest_seconds', 'notes', 'progression', 'progression_step', 'changed_fields', 'change_reason', 'logged_sets'])]
+#[Fillable(['exercise_id', 'program_exercise_id', 'position', 'sets', 'reps', 'load', 'target_rpe', 'rest_seconds', 'notes', 'progression', 'progression_step', 'changed_fields', 'change_reason', 'logged_sets', 'client_note', 'pain'])]
 class WorkoutExercise extends Model
 {
     /** Fields that describe what the coach prescribed (copied when a workout is assigned or duplicated). */
     public const PRESCRIPTION_FIELDS = ['exercise_id', 'position', 'sets', 'reps', 'load', 'target_rpe', 'rest_seconds', 'notes', 'progression', 'progression_step'];
+
+    protected $attributes = ['pain' => false];
 
     public const PROGRESSIONS = [
         'none' => 'No rule',
@@ -45,6 +49,7 @@ class WorkoutExercise extends Model
         return [
             'logged_sets' => 'array',
             'changed_fields' => 'array',
+            'pain' => 'boolean',
         ];
     }
 

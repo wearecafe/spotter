@@ -55,6 +55,8 @@ new #[Title('Workout builder')] class extends Component {
                 'rest_seconds' => (string) $item->rest_seconds,
                 'notes' => (string) $item->notes,
                 'logged_sets' => $item->logged_sets,
+                'client_note' => $item->client_note,
+                'pain' => $item->pain,
             ])
             ->all();
     }
@@ -309,11 +311,19 @@ new #[Title('Workout builder')] class extends Component {
                 </div>
                 <flux:input wire:model="items.{{ $index }}.notes" :placeholder="__('Notes for this exercise (optional)')" size="sm" />
 
-                @if (! empty($item['logged_sets']))
+                @if (! empty($item['logged_sets']) || ! empty($item['client_note']) || ! empty($item['pain']))
                     <div class="rounded-lg bg-zinc-50 p-3 text-sm dark:bg-zinc-900">
-                        <div class="mb-1 font-medium text-zinc-700 dark:text-zinc-300">{{ __('Client logged') }}</div>
+                        <div class="mb-1 flex items-center gap-2 font-medium text-zinc-700 dark:text-zinc-300">
+                            {{ __('Client logged') }}
+                            @if (! empty($item['pain']))
+                                <flux:badge size="sm" color="red">{{ __('Pain flagged') }}</flux:badge>
+                            @endif
+                        </div>
+                        @if (! empty($item['client_note']))
+                            <p class="mb-2 italic text-zinc-700 dark:text-zinc-300">“{{ $item['client_note'] }}”</p>
+                        @endif
                         <div class="flex flex-wrap gap-2">
-                            @foreach ($item['logged_sets'] as $i => $set)
+                            @foreach ($item['logged_sets'] ?? [] as $i => $set)
                                 <flux:badge size="sm" :color="($set['done'] ?? false) ? 'green' : 'zinc'">
                                     {{ __('Set :n', ['n' => $i + 1]) }}: {{ $set['reps'] ?: '—' }}{{ ($set['load'] ?? null) ? ' @ '.$set['load'] : '' }}
                                 </flux:badge>

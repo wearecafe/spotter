@@ -41,6 +41,7 @@ class InboxItem extends Model
         'feedback' => 55,
         'message' => 60,
         'pr' => 30,
+        'pain' => 90,
     ];
 
     public const LABELS = [
@@ -50,6 +51,7 @@ class InboxItem extends Model
         'feedback' => 'Workout feedback',
         'message' => 'Message',
         'pr' => 'Personal record',
+        'pain' => 'Pain flagged',
     ];
 
     protected function casts(): array

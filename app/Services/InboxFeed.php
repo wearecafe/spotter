@@ -63,6 +63,28 @@ class InboxFeed
         }
     }
 
+    /**
+     * The client flagged pain on an exercise. Raised as soon as it's saved, not when the workout is
+     * finished, and only once per exercise in a session (unflagging and flagging again doesn't repeat it).
+     */
+    public function painReported(WorkoutExercise $item): ?InboxItem
+    {
+        $alreadyRaised = InboxItem::query()
+            ->where('type', 'pain')
+            ->where('subject_type', $item->getMorphClass())
+            ->where('subject_id', $item->id)
+            ->exists();
+
+        if ($alreadyRaised) {
+            return null;
+        }
+
+        $client = $item->workout->client;
+        $exercise = $item->exercise->name;
+
+        return $this->add($client, 'pain', $item, __('Pain on :exercise', ['exercise' => $exercise]), $item->client_note);
+    }
+
     public function messageReceived(Message $message): ?InboxItem
     {
         $client = $message->client;

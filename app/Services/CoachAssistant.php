@@ -82,7 +82,9 @@ class CoachAssistant
             $context['workout'] = $subject->loadMissing('items.exercise');
         }
 
-        if ($subject instanceof WorkoutExercise) {
+        if ($subject instanceof WorkoutExercise && $item->type === 'pain') {
+            $context['pain_item'] = $subject->loadMissing('exercise', 'workout');
+        } elseif ($subject instanceof WorkoutExercise) {
             $context['pr_item'] = $subject->loadMissing('exercise');
         }
 
@@ -259,12 +261,18 @@ class CoachAssistant
             $lines[] = 'WORKOUT '.$w->title.' completed. Client feedback: '.($w->client_feedback ?: 'none');
             foreach ($w->items as $i) {
                 $sets = collect($i->logged_sets ?? [])->map(fn ($s) => ($s['reps'] ?? '-').'@'.($s['load'] ?? '-').(filled($s['rpe'] ?? null) ? ' RPE'.$s['rpe'] : ''))->implode(', ');
-                $lines[] = "  {$i->exercise->name}: planned {$i->prescription()}; logged {$sets}";
+                $lines[] = "  {$i->exercise->name}: planned {$i->prescription()}; logged {$sets}"
+                    .($i->client_note ? '; client note: '.Str::limit($i->client_note, 300) : '')
+                    .($i->pain ? ' (PAIN FLAGGED)' : '');
             }
         }
 
         if ($p = $context['pr_item'] ?? null) {
             $lines[] = 'PERSONAL RECORD on '.$p->exercise->name.': '.$item->summary;
+        }
+        if ($p = $context['pain_item'] ?? null) {
+            $sets = collect($p->logged_sets ?? [])->filter(fn ($s) => $s['done'] ?? false)->map(fn ($s) => ($s['reps'] ?? '-').'@'.($s['load'] ?? '-'))->implode(', ');
+            $lines[] = 'PAIN FLAGGED on '.$p->exercise->name.' in '.$p->workout->title.': planned '.$p->prescription().'; logged '.($sets ?: 'nothing yet').'. Client note: '.($p->client_note ?: 'none');
         }
 
         if (isset($context['missed'])) {
@@ -367,6 +375,14 @@ class CoachAssistant
                     : $t('Great work on :title, :name. Thanks for the notes, I’ll factor them into next week.', ['name' => $name, 'title' => $w->title]);
                 break;
 
+            case 'pain':
+                /** @var WorkoutExercise $p */
+                $p = $context['pain_item'];
+                $exercise = $p->exercise->name;
+                $summary = __('Flagged pain on :exercise in :title.', ['exercise' => $exercise, 'title' => $p->workout->title])
+                    .($p->client_note ? ' “'.Str::limit($p->client_note, 200).'”' : '');
+                $reply = $t('Thanks for flagging that, :name. Don’t push through pain on :exercise. Where exactly do you feel it, and does it hurt outside the gym too? I’ll adjust it in your next session.', ['name' => $name, 'exercise' => $exercise]);
+                break;
             case 'pr':
                 $summary = (string) $item->summary;
                 $reply = $t('New best on :exercise! Great work, :name.', ['name' => $name, 'exercise' => $context['pr_item']?->exercise->name ?? '']);
