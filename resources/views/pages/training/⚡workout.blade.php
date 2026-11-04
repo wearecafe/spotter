@@ -271,8 +271,9 @@ new #[Title('Workout')] class extends Component {
 
     @foreach ($workout->items as $index => $item)
         <flux:card class="flex flex-col gap-4" wire:key="log-{{ $item->id }}">
-            <div class="flex items-start justify-between gap-3">
-                <div>
+            {{-- On phones the buttons sit under the name, so the name and prescription get the full width. --}}
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                <div class="min-w-0">
                     <div class="font-display text-lg font-bold text-zinc-900 dark:text-white">{{ $index + 1 }}. {{ $item->exercise->name }}</div>
                     <flux:text>{{ $item->prescription() }}</flux:text>
                     @if ($last = $this->lastTimes[$item->exercise_id] ?? null)
@@ -282,7 +283,7 @@ new #[Title('Workout')] class extends Component {
                         <flux:text size="sm" class="mt-1 italic">{{ $item->notes }}</flux:text>
                     @endif
                 </div>
-                <div class="flex shrink-0 gap-1">
+                <div class="-ms-2 flex shrink-0 gap-1 sm:ms-0">
                     @if ($item->exercise->hasDemo())
                         <flux:modal.trigger :name="'how-to-'.$item->id">
                             <flux:button size="sm" variant="ghost" icon="play-circle">{{ __('How to') }}</flux:button>
