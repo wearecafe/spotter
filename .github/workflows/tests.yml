@@ -36,3 +36,32 @@ jobs:
 
       - name: Run CI Checks
         run: composer ci:check
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+
+      # docs/claude/decisions/2026-11-27-dependency-audit.md
+      - name: Composer audit
+        run: composer audit --locked
+
+      - name: npm audit
+        run: npm audit --omit=dev --audit-level=high

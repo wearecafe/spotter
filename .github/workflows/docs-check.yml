@@ -1,0 +1,25 @@
+name: docs-check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    name: Living docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check CLAUDE.md, decisions and UAT IDs
+        run: python3 scripts/docs_check.py
+      - name: Code changes come with docs
+        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'no-docs-needed')
+        run: python3 scripts/docs_check.py --require-docs origin/${{ github.base_ref }}
