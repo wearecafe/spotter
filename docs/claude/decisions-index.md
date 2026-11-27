@@ -11,7 +11,7 @@
 |---|---|---|---|---|
 | v0: PRs #1–#11 (mockups to help center), before the log | `archive/v0-status.md` | Merged | Yes (teams, staff, in-person clients) | F-1 to F-8 |
 | Coach feedback features (2026-11-04, pushed to main) | `coach-feedback.md` | Merged | Yes (archived clients) | CF-1 to CF-8 |
-| Adopting the delivery framework | `delivery-framework.md` | In review | No | None |
+| Adopting the delivery framework | `delivery-framework.md` | Merged (#12) | No | None |
 
 ## Reference docs
 
