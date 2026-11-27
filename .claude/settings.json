@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "worksite": {
+      "source": {
+        "source": "github",
+        "repo": "wearecafe/framework"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "delivery@worksite": true
+  }
+}
